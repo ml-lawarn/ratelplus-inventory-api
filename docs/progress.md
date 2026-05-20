@@ -1,0 +1,13 @@
+- 1. Architecture ✅
+- 2. Database Design
+- 3. Prisma Schema
+- 4. Database Infrastructure
+- 5. Shared/Core Foundation
+- 6. Authentication & Authorization
+- 7. Domain Modules
+- 8. Business Workflows
+- 9. Events & Queues
+- 10. Testing
+- 11. Observability
+- 12. Production Hardening
+- 13. CI/CD & Deployment
