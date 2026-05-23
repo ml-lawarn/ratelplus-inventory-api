@@ -1,0 +1,51 @@
+// src/modules/inventory/repositories/inventory.repository.ts
+
+import { Injectable } from '@nestjs/common';
+
+import { Prisma } from '@prisma/client';
+
+import { PrismaService } from '../../../core/database/prisma.service';
+
+@Injectable()
+export class InventoryRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(data: Prisma.EquipmentItemCreateInput) {
+    return this.prisma.equipmentItem.create({
+      data,
+    });
+  }
+
+  async findById(id: string) {
+    return this.prisma.equipmentItem.findUnique({
+      where: { id },
+
+      include: {
+        warehouse: true,
+        warehouseLocation: true,
+      },
+    });
+  }
+
+  async findByAssetTag(assetTag: string) {
+    return this.prisma.equipmentItem.findUnique({
+      where: { assetTag },
+    });
+  }
+
+  async findBySerialNumber(serialNumber: string) {
+    return this.prisma.equipmentItem.findUnique({
+      where: { serialNumber },
+    });
+  }
+
+  async findMany(params: Prisma.EquipmentItemFindManyArgs) {
+    return this.prisma.equipmentItem.findMany(params);
+  }
+
+  async count(where?: Prisma.EquipmentItemWhereInput) {
+    return this.prisma.equipmentItem.count({
+      where,
+    });
+  }
+}
