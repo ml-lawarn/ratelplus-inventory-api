@@ -40,7 +40,7 @@ export class AssignmentsService {
     private readonly auditService: AuditService,
   ) {}
 
-  async createAssignment(dto: CreateAssignmentDto) {
+  async createAssignment(dto: CreateAssignmentDto, userId: string) {
     const equipment = await this.inventoryRepository.findById(
       dto.equipmentItemId,
     );
@@ -57,9 +57,13 @@ export class AssignmentsService {
       throw new NotFoundException('Assigned user not found');
     }
 
-    const assignedByUser = await this.usersRepository.findById(
-      dto.assignedByUserId,
-    );
+    if (!assignedToUser.isActive) {
+      throw new BadRequestException(
+        'Cannot assign equipment to a deactivated user',
+      );
+    }
+
+    const assignedByUser = await this.usersRepository.findById(userId);
 
     if (!assignedByUser) {
       throw new NotFoundException('Assigning user not found');
@@ -81,22 +85,38 @@ export class AssignmentsService {
       throw new BadRequestException('Retired equipment cannot be assigned');
     }
 
-    const newQuantity = equipment.quantity - assignedQuantity;
-
     const assignment = await this.prisma.$transaction(async (tx) => {
-      await tx.equipmentItem.update({
-        where: {
-          id: equipment.id,
-        },
-
-        data: {
-          quantity: newQuantity,
-
-          status: equipment.isSerialized
-            ? EquipmentStatus.DEPLOYED
-            : equipment.status,
-        },
-      });
+      try {
+        await tx.equipmentItem.update({
+          where: {
+            id: equipment.id,
+            quantity: {
+              gte: assignedQuantity,
+            },
+            NOT: {
+              status: EquipmentStatus.RETIRED,
+            },
+          },
+          data: {
+            quantity: {
+              decrement: assignedQuantity,
+            },
+            status: equipment.isSerialized
+              ? EquipmentStatus.DEPLOYED
+              : undefined,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw new BadRequestException(
+            'Insufficient inventory quantity or asset state has changed',
+          );
+        }
+        throw error;
+      }
 
       return tx.equipmentAssignment.create({
         data: {
@@ -120,7 +140,7 @@ export class AssignmentsService {
 
           assignedByUser: {
             connect: {
-              id: dto.assignedByUserId,
+              id: userId,
             },
           },
         },
@@ -160,7 +180,7 @@ export class AssignmentsService {
 
       newValues: assignment,
 
-      performedById: dto.assignedByUserId,
+      performedById: userId,
     });
 
     return {
@@ -170,7 +190,11 @@ export class AssignmentsService {
     };
   }
 
-  async returnAssignment(assignmentId: string, dto: ReturnAssignmentDto) {
+  async returnAssignment(
+    assignmentId: string,
+    dto: ReturnAssignmentDto,
+    userId: string,
+  ) {
     const assignment = await this.assignmentsRepository.findById(assignmentId);
 
     if (!assignment) {
@@ -183,59 +207,69 @@ export class AssignmentsService {
 
     const equipment = assignment.equipmentItem;
 
-    const restoredQuantity: number =
-      Number(equipment.quantity) + Number(assignment.assignedQuantity);
-
     const updatedAssignment = await this.prisma.$transaction(async (tx) => {
-      await tx.equipmentItem.update({
-        where: {
-          id: equipment.id,
-        },
+      try {
+        const updated = await tx.equipmentAssignment.update({
+          where: {
+            id: assignment.id,
+            assignmentStatus: AssignmentStatus.ASSIGNED,
+          },
+          data: {
+            assignmentStatus: AssignmentStatus.RETURNED,
 
-        data: {
-          quantity: restoredQuantity,
+            actualReturnDate: new Date(),
 
-          status: equipment.isSerialized
-            ? EquipmentStatus.AVAILABLE
-            : equipment.status,
-        },
-      });
+            remarks: dto.remarks ? dto.remarks : assignment.remarks,
+          },
+          include: {
+            equipmentItem: true,
 
-      return tx.equipmentAssignment.update({
-        where: {
-          id: assignment.id,
-        },
+            assignedToUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
 
-        data: {
-          assignmentStatus: AssignmentStatus.RETURNED,
-
-          actualReturnDate: new Date(),
-
-          remarks: dto.remarks ? dto.remarks : assignment.remarks,
-        },
-
-        include: {
-          equipmentItem: true,
-
-          assignedToUser: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
+            assignedByUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
             },
           },
+        });
 
-          assignedByUser: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
+        await tx.equipmentItem.update({
+          where: {
+            id: equipment.id,
           },
-        },
-      });
+          data: {
+            quantity: {
+              increment: assignment.assignedQuantity,
+            },
+            status: equipment.isSerialized
+              ? EquipmentStatus.AVAILABLE
+              : undefined,
+          },
+        });
+
+        return updated;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw new BadRequestException(
+            'Equipment already returned or assignment is not active',
+          );
+        }
+        throw error;
+      }
     });
 
     await this.auditService.logActivity({
@@ -249,7 +283,7 @@ export class AssignmentsService {
 
       newValues: updatedAssignment,
 
-      performedById: updatedAssignment.assignedByUser.id,
+      performedById: userId,
     });
 
     return {
@@ -337,6 +371,19 @@ export class AssignmentsService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getAssignmentById(id: string) {
+    const assignment = await this.assignmentsRepository.findById(id);
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    return {
+      message: 'Assignment retrieved successfully',
+      data: assignment,
     };
   }
 }

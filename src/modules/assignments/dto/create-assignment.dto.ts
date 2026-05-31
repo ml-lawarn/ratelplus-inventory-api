@@ -8,28 +8,53 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAssignmentDto {
+  @ApiProperty({
+    description: 'Equipment item ID',
+    example: '7e641827-2f96-4d3c-96bc-a35cfac40733',
+  })
   @IsString()
   @IsUUID()
   equipmentItemId!: string;
 
-  @IsString()
-  // @IsUUID()
+  @ApiProperty({
+    description: 'User ID receiving the equipment',
+    example: '7e641827-2f96-4d3c-96bc-a35cfac40733',
+  })
+  @IsUUID()
   assignedToUserId!: string;
 
-  @IsString()
-  // @IsUUID()
-  assignedByUserId!: string;
+  @ApiPropertyOptional({
+    description: 'User ID assigning the equipment',
+    example: '7e641827-2f96-4d3c-96bc-a35cfac40733',
+  })
+  @IsOptional()
+  @IsUUID()
+  assignedByUserId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Expected return date',
+    example: '2026-06-30T00:00:00.000Z',
+  })
   @IsOptional()
   @IsDateString()
   expectedReturnDate?: string;
 
+  @ApiPropertyOptional({
+    description: 'Assignment remarks',
+    example: 'Issued for field work',
+  })
   @IsOptional()
   @IsString()
   remarks?: string;
 
+  @ApiPropertyOptional({
+    description: 'Quantity assigned',
+    example: 1,
+    minimum: 1,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
