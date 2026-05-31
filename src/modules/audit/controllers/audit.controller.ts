@@ -1,6 +1,12 @@
 // src/modules/audit/controllers/audit.controller.ts
 
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { AuditService } from '../services/audit.service';
 
@@ -14,6 +20,8 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+@ApiTags('Audit')
+@ApiBearerAuth()
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuditController {
@@ -21,6 +29,13 @@ export class AuditController {
 
   @Get()
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List audit logs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Audit logs retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async getAuditLogs(@Query() query: AuditQueryDto) {
     return this.auditService.getAuditLogs(query);
   }
