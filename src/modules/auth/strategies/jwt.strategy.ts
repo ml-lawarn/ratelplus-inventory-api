@@ -1,6 +1,4 @@
-// src/modules/auth/strategies/jwt.strategy.ts
-
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { PassportStrategy } from '@nestjs/passport';
@@ -8,10 +6,14 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+import { UsersRepository } from '../../users/repositories/users.repository';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly usersRepository: UsersRepository,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 
@@ -22,6 +24,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    return payload;
+    const user = await this.usersRepository.findById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('User account is deactivated');
+    }
+    return {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
   }
 }

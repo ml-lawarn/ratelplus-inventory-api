@@ -7,8 +7,12 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersRepository } from '../users/repositories/users.repository';
 
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
-import { comparePassword } from '../../shared/utils/password.util';
+import {
+  comparePassword,
+  hashPassword,
+} from '../../shared/utils/password.util';
 
 @Injectable()
 export class AuthService {
@@ -74,7 +78,34 @@ export class AuthService {
         email: user.email,
         role: user.role,
         isActive: user.isActive,
+        department: user.department?.name || null,
       },
+    };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersRepository.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isPasswordValid = await comparePassword(
+      dto.oldPassword,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    await this.usersRepository.update(userId, {
+      password: await hashPassword(dto.newPassword),
+    });
+
+    return {
+      message: 'Password changed successfully',
+      data: null,
     };
   }
 }

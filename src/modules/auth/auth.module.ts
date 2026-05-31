@@ -27,7 +27,7 @@ import { AuthService } from './auth.service';
       inject: [ConfigService],
 
       useFactory: (configService: ConfigService): JwtModuleOptions => ({
-        secret: configService.get<string>('JWT_SECRET') || 'fallback_secret',
+        secret: configService.get<string>('JWT_SECRET'),
 
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ||
