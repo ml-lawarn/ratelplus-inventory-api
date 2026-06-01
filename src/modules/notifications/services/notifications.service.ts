@@ -3,8 +3,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { NotificationType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
+import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { NotificationsRepository } from '../repositories/notifications.repository';
+import { NotificationQueryDto } from '../dto/notification-query.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -34,32 +38,103 @@ export class NotificationsService {
     });
   }
 
-  async getUserNotifications(recipientId: string) {
-    return this.notificationsRepository.findMany({
-      where: {
-        recipientId,
-      },
+  async getUserNotifications(recipientId: string, query: NotificationQueryDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const search = query.search?.trim();
 
-      orderBy: {
-        createdAt: 'desc',
+    const { skip, take } = buildPagination(page, limit);
+
+    const where: Prisma.NotificationWhereInput = {
+      recipientId,
+      ...(query.isRead !== undefined && {
+        isRead: query.isRead,
+      }),
+      ...(search && {
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            message: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+    };
+
+    const [notifications, total] = await Promise.all([
+      this.notificationsRepository.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.notificationsRepository.count(where),
+    ]);
+
+    return {
+      message: 'Notifications retrieved successfully',
+      data: {
+        items: notifications,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       },
-    });
+    };
   }
 
-  async markAsRead(id: string) {
+  async markAsRead(id: string, recipientId: string) {
+    const existingNotification = await this.notificationsRepository.findFirst({
+      where: {
+        id,
+        recipientId,
+      },
+    });
+
+    if (!existingNotification) {
+      throw new NotFoundException('Notification not found');
+    }
+
     const notification = await this.notificationsRepository.update(id, {
       isRead: true,
       readAt: new Date(),
     });
 
-    if (!notification) {
-      throw new NotFoundException('Notification not found');
-    }
-
     return {
       message: 'Notification marked as read',
 
       data: notification,
+    };
+  }
+
+  async markAllAsRead(recipientId: string) {
+    const result = await this.notificationsRepository.updateMany({
+      where: {
+        recipientId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    });
+
+    return {
+      message: 'Notifications marked as read',
+      data: {
+        updatedCount: result.count,
+      },
     };
   }
 }

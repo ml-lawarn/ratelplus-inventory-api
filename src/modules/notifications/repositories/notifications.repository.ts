@@ -20,10 +20,24 @@ export class NotificationsRepository {
     return this.prisma.notification.findMany(params);
   }
 
+  async findFirst(params: Prisma.NotificationFindFirstArgs) {
+    return this.prisma.notification.findFirst(params);
+  }
+
+  async count(where?: Prisma.NotificationWhereInput) {
+    return this.prisma.notification.count({
+      where,
+    });
+  }
+
   async update(id: string, data: Prisma.NotificationUpdateInput) {
     return this.prisma.notification.update({
       where: { id },
       data,
     });
+  }
+
+  async updateMany(params: Prisma.NotificationUpdateManyArgs) {
+    return this.prisma.notification.updateMany(params);
   }
 }
