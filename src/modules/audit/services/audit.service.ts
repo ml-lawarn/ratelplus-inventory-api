@@ -49,6 +49,8 @@ export class AuditService {
 
     const limit = query.limit || 20;
 
+    const search = query.search?.trim();
+
     const { skip, take } = buildPagination(page, limit);
 
     const where: Prisma.AuditLogWhereInput = {
@@ -62,6 +64,23 @@ export class AuditService {
 
       ...(query.performedById && {
         performedById: query.performedById,
+      }),
+
+      ...(search && {
+        OR: [
+          {
+            entityId: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
       }),
     };
 

@@ -37,4 +37,11 @@ export class CategoriesRepository {
       where,
     });
   }
+
+  async update(id: string, data: Prisma.CategoryUpdateInput) {
+    return this.prisma.category.update({
+      where: { id },
+      data,
+    });
+  }
 }

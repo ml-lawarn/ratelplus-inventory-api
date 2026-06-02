@@ -29,4 +29,12 @@ export class AuditQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   performedById?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search term for filtering audit logs by entity ID or details',
+    example: 'overdue',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

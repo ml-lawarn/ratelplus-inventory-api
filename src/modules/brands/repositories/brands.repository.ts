@@ -37,4 +37,11 @@ export class BrandsRepository {
       where,
     });
   }
+
+  async update(id: string, data: Prisma.BrandUpdateInput) {
+    return this.prisma.brand.update({
+      where: { id },
+      data,
+    });
+  }
 }

@@ -1,12 +1,17 @@
 // src/modules/brands/services/brands.service.ts
 
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '@prisma/client';
 
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { CreateBrandDto } from '../dto/create-brand.dto';
+import { UpdateBrandDto } from '../dto/update-brand.dto';
 import { BrandQueryDto } from '../dto/brand-query.dto';
 
 import { BrandsRepository } from '../repositories/brands.repository';
@@ -83,6 +88,45 @@ export class BrandsService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getBrandById(id: string) {
+    const brand = await this.brandsRepository.findById(id);
+
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
+    }
+
+    return {
+      message: 'Brand retrieved successfully',
+      data: brand,
+    };
+  }
+
+  async updateBrand(id: string, dto: UpdateBrandDto) {
+    const brand = await this.brandsRepository.findById(id);
+
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
+    }
+
+    if (dto.name && dto.name !== brand.name) {
+      const existingBrand = await this.brandsRepository.findByName(dto.name);
+
+      if (existingBrand) {
+        throw new ConflictException('Brand already exists');
+      }
+    }
+
+    const updatedBrand = await this.brandsRepository.update(id, {
+      name: dto.name,
+      description: dto.description,
+    });
+
+    return {
+      message: 'Brand updated successfully',
+      data: updatedBrand,
     };
   }
 }

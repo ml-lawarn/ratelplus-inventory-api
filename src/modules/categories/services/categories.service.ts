@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { CreateCategoryDto } from '../dto/create-category.dto';
+import { UpdateCategoryDto } from '../dto/update-category.dto';
 import { CategoryQueryDto } from '../dto/category-query.dto';
 
 import { CategoriesRepository } from '../repositories/categories.repository';
@@ -117,6 +118,68 @@ export class CategoriesService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getCategoryById(id: string) {
+    const category = await this.categoriesRepository.findById(id);
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    return {
+      message: 'Category retrieved successfully',
+      data: category,
+    };
+  }
+
+  async updateCategory(id: string, dto: UpdateCategoryDto) {
+    const category = await this.categoriesRepository.findById(id);
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    if (dto.name && dto.name !== category.name) {
+      const existingCategory = await this.categoriesRepository.findByName(
+        dto.name,
+      );
+
+      if (existingCategory) {
+        throw new ConflictException('Category already exists');
+      }
+    }
+
+    if (dto.parentCategoryId) {
+      if (dto.parentCategoryId === id) {
+        throw new ConflictException('Category cannot be its own parent');
+      }
+
+      const parentCategory = await this.categoriesRepository.findById(
+        dto.parentCategoryId,
+      );
+
+      if (!parentCategory) {
+        throw new NotFoundException('Parent category not found');
+      }
+    }
+
+    const updatedCategory = await this.categoriesRepository.update(id, {
+      name: dto.name,
+      description: dto.description,
+      parentCategory: dto.parentCategoryId
+        ? {
+            connect: {
+              id: dto.parentCategoryId,
+            },
+          }
+        : undefined,
+    });
+
+    return {
+      message: 'Category updated successfully',
+      data: updatedCategory,
     };
   }
 }

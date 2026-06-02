@@ -25,6 +25,7 @@ import { ReturnAssignmentDto } from '../dto/return-assignment.dto';
 import { AssignmentsRepository } from '../repositories/assignments.repository';
 
 import { AuditService } from '../../audit/services/audit.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class AssignmentsService {
@@ -38,6 +39,8 @@ export class AssignmentsService {
     private readonly usersRepository: UsersRepository,
 
     private readonly auditService: AuditService,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createAssignment(dto: CreateAssignmentDto, userId: string) {
@@ -120,7 +123,7 @@ export class AssignmentsService {
 
       return tx.equipmentAssignment.create({
         data: {
-          expectedReturnDate: dto.expectedReturnDate,
+          expectedReturnDate: new Date(dto.expectedReturnDate as string | Date),
 
           remarks: dto.remarks,
 
@@ -182,6 +185,12 @@ export class AssignmentsService {
 
       performedById: userId,
     });
+
+    await this.notificationsService.createNotification(
+      assignment.assignedToUserId,
+      'Equipment Assigned',
+      `You have been assigned ${assignment.equipmentItem.equipmentName}`,
+    );
 
     return {
       message: 'Equipment assigned successfully',
@@ -286,6 +295,12 @@ export class AssignmentsService {
       performedById: userId,
     });
 
+    await this.notificationsService.createNotification(
+      updatedAssignment.assignedToUserId,
+      'Equipment Returned',
+      `${updatedAssignment.equipmentItem.equipmentName} has been returned successfully`,
+    );
+
     return {
       message: 'Equipment returned successfully',
 
@@ -297,6 +312,7 @@ export class AssignmentsService {
     const page = query.page || 1;
 
     const limit = query.limit || 10;
+    const search = query.search?.trim();
 
     const { skip, take } = buildPagination(page, limit);
 
@@ -311,6 +327,53 @@ export class AssignmentsService {
 
       ...(query.assignmentStatus && {
         assignmentStatus: query.assignmentStatus,
+      }),
+
+      ...(search && {
+        OR: [
+          {
+            equipmentItem: {
+              equipmentName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            equipmentItem: {
+              assetTag: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            equipmentItem: {
+              category: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+          {
+            assignedToUser: {
+              firstName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            assignedToUser: {
+              lastName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
       }),
     };
 

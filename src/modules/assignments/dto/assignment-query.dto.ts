@@ -32,4 +32,12 @@ export class AssignmentQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(AssignmentStatus)
   assignmentStatus?: AssignmentStatus;
+
+  @ApiPropertyOptional({
+    description:
+      'Search term to filter by equipment name, category, or assigned user name',
+    example: 'laptop',
+  })
+  @IsOptional()
+  search?: string;
 }
