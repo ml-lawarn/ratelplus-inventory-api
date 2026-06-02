@@ -25,6 +25,11 @@ export class UsersRepository {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
+      include: {
+        department: {
+          select: { name: true },
+        },
+      },
     });
   }
 
@@ -35,6 +40,13 @@ export class UsersRepository {
   async count(where?: Prisma.UserWhereInput) {
     return this.prisma.user.count({
       where,
+    });
+  }
+
+  async update(id: string, data: Prisma.UserUpdateInput) {
+    return this.prisma.user.update({
+      where: { id },
+      data,
     });
   }
 }

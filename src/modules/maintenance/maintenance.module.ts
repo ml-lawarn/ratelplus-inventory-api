@@ -16,8 +16,16 @@ import { MaintenanceRepository } from './repositories/maintenance.repository';
 
 import { AuditModule } from '../audit/audit.module';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
-  imports: [InventoryModule, UsersModule, VendorsModule, AuditModule],
+  imports: [
+    InventoryModule,
+    UsersModule,
+    VendorsModule,
+    AuditModule,
+    NotificationsModule,
+  ],
 
   controllers: [MaintenanceController],
 

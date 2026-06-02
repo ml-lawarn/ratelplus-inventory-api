@@ -28,6 +28,8 @@ import { MaintenanceRepository } from '../repositories/maintenance.repository';
 
 import { AuditService } from '../../audit/services/audit.service';
 
+import { NotificationsService } from '../../notifications/services/notifications.service';
+
 @Injectable()
 export class MaintenanceService {
   constructor(
@@ -40,10 +42,18 @@ export class MaintenanceService {
     private readonly usersRepository: UsersRepository,
 
     private readonly vendorsRepository: VendorsRepository,
+
     private readonly auditService: AuditService,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
-  async createMaintenanceRecord(dto: CreateMaintenanceRecordDto) {
+  async createMaintenanceRecord(
+    dto: CreateMaintenanceRecordDto,
+    userId: string,
+  ) {
+    let isMaintenanceScheduledOrInProgress = false;
+
     const equipment = await this.inventoryRepository.findById(
       dto.equipmentItemId,
     );
@@ -52,10 +62,16 @@ export class MaintenanceService {
       throw new NotFoundException('Equipment item not found');
     }
 
-    const createdBy = await this.usersRepository.findById(dto.createdById);
+    const createdBy = await this.usersRepository.findById(userId);
 
     if (!createdBy) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!createdBy.isActive) {
+      throw new BadRequestException(
+        'Cannot record maintenance for deactivated user',
+      );
     }
 
     if (dto.vendorId) {
@@ -78,27 +94,37 @@ export class MaintenanceService {
 
           priority: dto.priority,
 
-          scheduledDate: dto.scheduledDate,
+          scheduledDate: new Date(dto.scheduledDate as string | Date),
 
-          maintenanceStartDate: dto.maintenanceStartDate,
+          maintenanceStartDate: new Date(
+            dto.maintenanceStartDate as string | Date,
+          ),
 
-          maintenanceEndDate: dto.maintenanceEndDate,
+          maintenanceEndDate: new Date(dto.maintenanceEndDate as string | Date),
 
-          downtimeHours: dto.downtimeHours,
+          downtimeHours: dto.downtimeHours
+            ? new Prisma.Decimal(dto.downtimeHours)
+            : undefined,
 
           technicianName: dto.technicianName,
 
           technicianPhone: dto.technicianPhone,
 
-          repairCost: dto.repairCost,
-
-          partsCost: dto.partsCost,
-
-          laborCost: dto.laborCost,
+          repairCost: dto.repairCost
+            ? new Prisma.Decimal(dto.repairCost)
+            : undefined,
+          partsCost: dto.partsCost
+            ? new Prisma.Decimal(dto.partsCost)
+            : undefined,
+          laborCost: dto.laborCost
+            ? new Prisma.Decimal(dto.laborCost)
+            : undefined,
 
           resolutionNotes: dto.resolutionNotes,
 
-          nextMaintenanceDate: dto.nextMaintenanceDate,
+          nextMaintenanceDate: new Date(
+            dto.nextMaintenanceDate as string | Date,
+          ),
 
           equipmentItem: {
             connect: {
@@ -116,7 +142,7 @@ export class MaintenanceService {
 
           createdBy: {
             connect: {
-              id: dto.createdById,
+              id: userId,
             },
           },
         },
@@ -141,6 +167,7 @@ export class MaintenanceService {
         dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS ||
         dto.maintenanceStatus === MaintenanceStatus.SCHEDULED
       ) {
+        isMaintenanceScheduledOrInProgress = true;
         await tx.equipmentItem.update({
           where: {
             id: equipment.id,
@@ -150,6 +177,12 @@ export class MaintenanceService {
             status: EquipmentStatus.MAINTENANCE,
           },
         });
+
+        await this.notificationsService.createNotification(
+          createdBy.id,
+          'Maintenance Scheduled',
+          `Maintenance record scheduled for ${equipment.equipmentName}`,
+        );
       }
 
       return record;
@@ -166,8 +199,16 @@ export class MaintenanceService {
 
       newValues: maintenanceRecord,
 
-      performedById: dto.createdById,
+      performedById: userId,
     });
+
+    if (!isMaintenanceScheduledOrInProgress) {
+      await this.notificationsService.createNotification(
+        createdBy.id,
+        'Maintenance Record Created',
+        `Maintenance record for ${equipment.equipmentName} has been created successfully`,
+      );
+    }
 
     return {
       message: 'Maintenance record created successfully',
@@ -198,9 +239,11 @@ export class MaintenanceService {
         data: {
           maintenanceStatus: dto.maintenanceStatus,
 
-          maintenanceStartDate: dto.maintenanceStartDate,
+          maintenanceStartDate: new Date(
+            dto.maintenanceStartDate as string | Date,
+          ),
 
-          maintenanceEndDate: dto.maintenanceEndDate,
+          maintenanceEndDate: new Date(dto.maintenanceEndDate as string | Date),
 
           resolutionNotes: dto.resolutionNotes,
         },
@@ -231,6 +274,12 @@ export class MaintenanceService {
             status: EquipmentStatus.AVAILABLE,
           },
         });
+
+        await this.notificationsService.createNotification(
+          updatedRecord.createdById,
+          'Maintenance Completed',
+          `Maintenance for ${equipment.equipmentName} has been completed`,
+        );
       }
 
       if (dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS) {
@@ -243,6 +292,12 @@ export class MaintenanceService {
             status: EquipmentStatus.MAINTENANCE,
           },
         });
+
+        await this.notificationsService.createNotification(
+          updatedRecord.createdById,
+          'Maintenance In Progress',
+          `Maintenance for ${equipment.equipmentName} is now in progress`,
+        );
       }
 
       return updatedRecord;
@@ -272,6 +327,8 @@ export class MaintenanceService {
 
     const limit = query.limit || 10;
 
+    const search = query.search?.trim();
+
     const { skip, take } = buildPagination(page, limit);
 
     const where: Prisma.MaintenanceRecordWhereInput = {
@@ -285,6 +342,51 @@ export class MaintenanceService {
 
       ...(query.priority && {
         priority: query.priority,
+      }),
+
+      ...(search && {
+        OR: [
+          {
+            equipmentItem: {
+              equipmentName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            equipmentItem: {
+              assetTag: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            vendor: {
+              companyName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            equipmentItem: {
+              category: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+          {
+            resolutionNotes: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
       }),
     };
 
@@ -343,6 +445,19 @@ export class MaintenanceService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getMaintenanceRecordById(id: string) {
+    const record = await this.maintenanceRepository.findById(id);
+
+    if (!record) {
+      throw new NotFoundException('Maintenance record not found');
+    }
+
+    return {
+      message: 'Maintenance record retrieved successfully',
+      data: record,
     };
   }
 }

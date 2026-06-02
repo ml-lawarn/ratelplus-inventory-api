@@ -10,6 +10,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { MaintenanceService } from '../services/maintenance.service';
 
@@ -27,6 +33,12 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+
+import type { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
+@ApiTags('Maintenance')
+@ApiBearerAuth()
 @Controller('maintenance')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class MaintenanceController {
@@ -34,12 +46,29 @@ export class MaintenanceController {
 
   @Post()
   @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
-  async createMaintenanceRecord(@Body() dto: CreateMaintenanceRecordDto) {
-    return this.maintenanceService.createMaintenanceRecord(dto);
+  @ApiOperation({ summary: 'Create maintenance record' })
+  @ApiResponse({
+    status: 201,
+    description: 'Maintenance record created successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
+  async createMaintenanceRecord(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateMaintenanceRecordDto,
+  ) {
+    return this.maintenanceService.createMaintenanceRecord(dto, user.sub);
   }
 
   @Patch(':id/status')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  @ApiOperation({ summary: 'Update maintenance status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Maintenance status updated successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async updateMaintenanceStatus(
     @Param('id') id: string,
 
@@ -50,7 +79,27 @@ export class MaintenanceController {
 
   @Get()
   @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @ApiOperation({ summary: 'List maintenance records' })
+  @ApiResponse({
+    status: 200,
+    description: 'Maintenance records retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async getMaintenanceRecords(@Query() query: MaintenanceQueryDto) {
     return this.maintenanceService.getMaintenanceRecords(query);
+  }
+
+  @Get(':id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @ApiOperation({ summary: 'Get maintenance record by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Maintenance record retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
+  async getMaintenanceRecordById(@Param('id') id: string) {
+    return this.maintenanceService.getMaintenanceRecordById(id);
   }
 }

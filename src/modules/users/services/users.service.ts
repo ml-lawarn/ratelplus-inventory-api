@@ -1,12 +1,17 @@
 // src/modules/users/services/users.service.ts
 
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '@prisma/client';
 
 import { UsersRepository } from '../repositories/users.repository';
 
 import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserQueryDto } from '../dto/user-query.dto';
 
 import { hashPassword } from '../../../shared/utils/password.util';
@@ -43,9 +48,10 @@ export class UsersService {
         : undefined,
     });
 
+    const { password, ...safeUser } = user; // Exclude password from response
     return {
       message: 'User created successfully',
-      data: user,
+      data: safeUser,
     };
   }
 
@@ -119,6 +125,76 @@ export class UsersService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getUserById(id: string) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { password, ...safeUser } = user;
+
+    return {
+      message: 'User retrieved successfully',
+      data: safeUser,
+    };
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.usersRepository.findByEmail(dto.email);
+
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+    }
+
+    const updatedUser = await this.usersRepository.update(id, {
+      employeeCode: dto.employeeCode,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phoneNumber: dto.phoneNumber,
+      role: dto.role,
+      department: dto.departmentId
+        ? {
+            connect: {
+              id: dto.departmentId,
+            },
+          }
+        : undefined,
+    });
+
+    const { password, ...safeUser } = updatedUser;
+
+    return {
+      message: 'User updated successfully',
+      data: safeUser,
+    };
+  }
+
+  async setUserActiveState(id: string, isActive: boolean) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updatedUser = await this.usersRepository.update(id, { isActive });
+    const { password, ...safeUser } = updatedUser;
+
+    return {
+      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: safeUser,
     };
   }
 }
