@@ -1,0 +1,200 @@
+// src/modules/users/services/users.service.ts
+
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { Prisma } from '@prisma/client';
+
+import { UsersRepository } from '../repositories/users.repository';
+
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { UserQueryDto } from '../dto/user-query.dto';
+
+import { hashPassword } from '../../../shared/utils/password.util';
+import { buildPagination } from '../../../shared/utils/pagination.util';
+
+@Injectable()
+export class UsersService {
+  constructor(private readonly usersRepository: UsersRepository) {}
+
+  async createUser(dto: CreateUserDto) {
+    const existingUser = await this.usersRepository.findByEmail(dto.email);
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const hashedPassword = await hashPassword(dto.password);
+
+    const user = await this.usersRepository.create({
+      employeeCode: dto.employeeCode,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phoneNumber: dto.phoneNumber,
+      role: dto.role,
+      password: hashedPassword,
+
+      department: dto.departmentId
+        ? {
+            connect: {
+              id: dto.departmentId,
+            },
+          }
+        : undefined,
+    });
+
+    const { password, ...safeUser } = user; // Exclude password from response
+    return {
+      message: 'User created successfully',
+      data: safeUser,
+    };
+  }
+
+  async getUsers(query: UserQueryDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+
+    const { skip, take } = buildPagination(page, limit);
+
+    const where: Prisma.UserWhereInput = query.search
+      ? {
+          OR: [
+            {
+              firstName: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
+            {
+              lastName: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
+            {
+              email: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        }
+      : {};
+
+    const [users, total] = await Promise.all([
+      this.usersRepository.findMany({
+        where,
+        skip,
+        take,
+
+        orderBy: {
+          createdAt: 'desc',
+        },
+
+        select: {
+          id: true,
+          employeeCode: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phoneNumber: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      }),
+
+      this.usersRepository.count(where),
+    ]);
+
+    return {
+      message: 'Users retrieved successfully',
+
+      data: {
+        items: users,
+
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  }
+
+  async getUserById(id: string) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { password, ...safeUser } = user;
+
+    return {
+      message: 'User retrieved successfully',
+      data: safeUser,
+    };
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.usersRepository.findByEmail(dto.email);
+
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+    }
+
+    const updatedUser = await this.usersRepository.update(id, {
+      employeeCode: dto.employeeCode,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phoneNumber: dto.phoneNumber,
+      role: dto.role,
+      department: dto.departmentId
+        ? {
+            connect: {
+              id: dto.departmentId,
+            },
+          }
+        : undefined,
+    });
+
+    const { password, ...safeUser } = updatedUser;
+
+    return {
+      message: 'User updated successfully',
+      data: safeUser,
+    };
+  }
+
+  async setUserActiveState(id: string, isActive: boolean) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updatedUser = await this.usersRepository.update(id, { isActive });
+    const { password, ...safeUser } = updatedUser;
+
+    return {
+      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: safeUser,
+    };
+  }
+}

@@ -1,0 +1,470 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../generated/prisma"
+// }
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL")
+}
+
+//
+// ENUMS
+//
+
+enum EquipmentCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  DEPLOYED
+  MAINTENANCE
+  RETIRED
+  LOST
+  DAMAGED
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum StockMovementType {
+  STOCK_IN
+  STOCK_OUT
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+//
+// MODELS
+//
+
+model Department {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  users User[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("departments")
+}
+
+model User {
+  id            String  @id @default(uuid())
+  employeeCode  String  @unique @map("employee_code")
+  firstName     String  @map("first_name")
+  lastName      String  @map("last_name")
+  email         String  @unique
+  phoneNumber   String? @map("phone_number")
+  role          String
+  password String
+  isActive      Boolean @default(true) @map("is_active")
+
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  managedWarehouses Warehouse[]
+
+  createdAssignments EquipmentAssignment[] @relation("AssignedBy")
+  receivedAssignments EquipmentAssignment[] @relation("AssignedTo")
+
+  createdMaintenanceRecords MaintenanceRecord[]
+
+  stockMovements StockMovement[]
+
+  auditLogs AuditLog[]
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([departmentId])
+  @@map("users")
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  parentCategoryId String?   @map("parent_category_id")
+  parentCategory   Category? @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+
+  subcategories Category[] @relation("CategoryHierarchy")
+
+  equipmentItems EquipmentItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([parentCategoryId])
+  @@map("categories")
+}
+
+model Brand {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  equipmentItems EquipmentItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("brands")
+}
+
+model Vendor {
+  id               String  @id @default(uuid())
+  companyName      String  @unique  @map("company_name")
+  contactPerson    String? @map("contact_person")
+  email            String?
+  phoneNumber      String? @map("phone_number")
+  address          String?
+  city             String?
+  state            String?
+  country          String? @default("Nigeria")
+  website          String?
+
+  equipmentItems EquipmentItem[]
+  maintenanceRecords MaintenanceRecord[]
+
+  isActive      Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vendors")
+}
+
+model Warehouse {
+  id      String @id @default(uuid())
+  name    String
+  code    String @unique
+  address String?
+  city    String?
+  state   String?
+  country String? @default("Nigeria")
+
+  latitude  Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+
+  isActive Boolean @default(true) @map("is_active")
+
+  managerId String? @map("manager_id")
+  manager   User?   @relation(fields: [managerId], references: [id])
+
+  locations WarehouseLocation[]
+
+  equipmentItems EquipmentItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([managerId])
+  @@map("warehouses")
+}
+
+model WarehouseLocation {
+  id           String @id @default(uuid())
+
+  locationCode String @map("location_code")
+
+  room         String?
+  aisle String?
+  rack  String?
+  shelf        String?
+  bin          String?
+  description  String?
+
+  isActive Boolean @default(true) @map("is_active")
+
+  warehouseId String    @map("warehouse_id")
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  equipmentItems EquipmentItem[]
+
+  sourceMovements StockMovement[] @relation("SourceLocation")
+  destinationMovements StockMovement[] @relation("DestinationLocation")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([warehouseId, locationCode])
+  @@index([warehouseId])
+  @@map("warehouse_locations")
+}
+
+model EquipmentItem {
+  id String @id @default(uuid())
+
+  assetTag     String  @unique @map("asset_tag")
+  serialNumber String? @unique @map("serial_number")
+
+  equipmentName String  @map("equipment_name")
+  modelNumber   String? @map("model_number")
+
+  description    String?
+  specifications Json?
+
+  purchaseDate DateTime? @map("purchase_date")
+  purchaseCost Decimal? @db.Decimal(15, 2)  @map("purchase_cost")
+
+  currentValue Decimal? @db.Decimal(15, 2)  @map("current_value")
+
+  warrantyStartDate DateTime? @map("warranty_start_date")
+  warrantyEndDate DateTime?  @map("warranty_end_date")
+
+  status EquipmentStatus @default(AVAILABLE)
+
+  condition EquipmentCondition  @default(GOOD)
+
+  isSerialized Boolean  @default(true)  @map("is_serialized")
+
+  quantity Int @default(1)
+
+  minimumStockLevel Int?  @map("minimum_stock_level")
+
+  reorderLevel Int?  @map("reorder_level")
+
+  categoryId String? @map("category_id")
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  brandId String? @map("brand_id")
+  brand Brand? @relation(fields: [brandId], references: [id])
+
+  vendorId String? @map("vendor_id")
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  warehouseId String? @map("warehouse_id")
+  warehouse Warehouse?  @relation(fields: [warehouseId], references: [id])
+
+  warehouseLocationId String? @map("warehouse_location_id")
+  warehouseLocation WarehouseLocation?  @relation(fields: [warehouseLocationId], references: [id])
+
+  stockMovements StockMovement[]
+  assignments EquipmentAssignment[]
+  maintenanceRecords MaintenanceRecord[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([vendorId])
+  @@index([warehouseId])
+  @@index([warehouseLocationId])
+  @@index([status])
+  @@index([condition])
+
+  @@map("equipment_items")
+}
+
+model StockMovement {
+  id String @id @default(uuid())
+
+  movementType StockMovementType  @map("movement_type")
+
+  quantity Int @default(1)
+  previousQuantity Int  @map("previous_quantity")
+  newQuantity Int @map("new_quantity")
+  referenceNumber String? @map("reference_number")
+
+  remarks String?
+
+  equipmentItemId String  @map("equipment_item_id")
+  equipmentItem EquipmentItem @relation(fields: [equipmentItemId], references: [id])
+
+  sourceLocationId String?  @map("source_location_id")
+  sourceLocation WarehouseLocation? @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+
+  destinationLocationId String? @map("destination_location_id")
+  destinationLocation WarehouseLocation?  @relation("DestinationLocation",  fields: [destinationLocationId],  references: [id])
+
+  performedById String  @map("performed_by_id")
+  performedBy User  @relation(fields: [performedById], references: [id])
+
+  movementDate DateTime @default(now())  @map("movement_date")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([equipmentItemId])
+  @@index([performedById])
+  @@index([movementType])
+  @@index([movementDate])
+
+  @@map("stock_movements")
+}
+
+model EquipmentAssignment {
+  id String @id @default(uuid())
+
+  assignmentStatus AssignmentStatus @default(ASSIGNED)  @map("assignment_status")
+
+  checkoutDate DateTime @default(now()) @map("checkout_date")
+  expectedReturnDate DateTime?  @map("expected_return_date")
+  actualReturnDate DateTime?  @map("actual_return_date")
+
+  remarks String?
+
+  assignedQuantity Int  @default(1) @map("assigned_quantity")
+  equipmentItemId String  @map("equipment_item_id")
+  equipmentItem EquipmentItem @relation(fields: [equipmentItemId], references: [id])
+
+  assignedToUserId String @map("assigned_to_user_id")
+  assignedToUser User @relation("AssignedTo", fields: [assignedToUserId], references: [id])
+
+  assignedByUserId String @map("assigned_by_user_id")
+  assignedByUser User @relation("AssignedBy", fields: [assignedByUserId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt  @map("updated_at")
+
+  @@index([equipmentItemId])
+  @@index([assignedToUserId])
+  @@index([assignmentStatus])
+
+  @@map("equipment_assignments")
+}
+
+model MaintenanceRecord {
+  id String @id @default(uuid())
+
+  maintenanceType String  @map("maintenance_type")
+  issueDescription String?  @map("issue_description")
+  maintenanceStatus MaintenanceStatus @default(SCHEDULED) @map("maintenance_status")
+
+  priority MaintenancePriority  @default(MEDIUM)
+
+  scheduledDate DateTime? @map("scheduled_date")
+  maintenanceStartDate DateTime?  @map("maintenance_start_date")
+  maintenanceEndDate DateTime?  @map("maintenance_end_date")
+
+  downtimeHours Decimal?  @db.Decimal(10, 2)  @map("downtime_hours")
+
+  technicianName String?  @map("technician_name")
+  technicianPhone String? @map("technician_phone")
+
+  repairCost Decimal? @db.Decimal(15, 2)  @map("repair_cost")
+  partsCost Decimal?  @db.Decimal(15, 2)  @map("parts_cost")
+  laborCost Decimal?  @db.Decimal(15, 2)  @map("labor_cost")
+
+  resolutionNotes String? @map("resolution_notes")
+  nextMaintenanceDate DateTime? @map("next_maintenance_date")
+
+  equipmentItemId String  @map("equipment_item_id")
+  equipmentItem EquipmentItem @relation(fields: [equipmentItemId], references: [id])
+
+  vendorId String?  @map("vendor_id")
+  vendor Vendor?  @relation(fields: [vendorId], references: [id])
+
+  createdById String  @map("created_by_id")
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt  @map("updated_at")
+
+  @@index([equipmentItemId])
+  @@index([vendorId])
+  @@index([createdById])
+  @@index([maintenanceStatus])
+  @@index([priority])
+
+  @@map("maintenance_records")
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  action String
+
+  entityType String @map("entity_type")
+  entityId String?  @map("entity_id")
+
+  description String?
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  oldValues Json? @map("old_values")
+  newValues Json? @map("new_values")
+
+  performedById String? @map("performed_by_id")
+  performedBy User? @relation(fields: [performedById], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([entityType])
+  @@index([entityId])
+  @@index([performedById])
+  @@index([createdAt])
+
+  @@map("audit_logs")
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  title String
+
+  message String
+
+  type NotificationType @default(INFO)
+
+  isRead Boolean  @default(false) @map("is_read")
+
+  readAt DateTime?  @map("read_at")
+
+  recipientId String  @map("recipient_id")
+
+  recipient User  @relation(fields: [recipientId], references: [id])
+
+  createdAt DateTime  @default(now())  @map("created_at")
+
+  @@index([recipientId])
+
+  @@index([isRead])
+
+  @@map("notifications")
+}
