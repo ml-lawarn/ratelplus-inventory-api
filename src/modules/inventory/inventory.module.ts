@@ -18,10 +18,13 @@ import { InventoryService } from './services/inventory.service';
 
 import { InventoryRepository } from './repositories/inventory.repository';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
   imports: [
     CategoriesModule,
     BrandsModule,
+    NotificationsModule,
     VendorsModule,
     WarehousesModule,
     WarehouseLocationsModule,

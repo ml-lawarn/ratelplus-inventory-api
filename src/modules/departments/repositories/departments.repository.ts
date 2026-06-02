@@ -37,4 +37,11 @@ export class DepartmentsRepository {
       where,
     });
   }
+
+  async update(id: string, data: Prisma.DepartmentUpdateInput) {
+    return this.prisma.department.update({
+      where: { id },
+      data,
+    });
+  }
 }

@@ -87,6 +87,8 @@ export class DashboardService {
       this.prisma.maintenanceRecord.aggregate({
         _sum: {
           repairCost: true,
+          laborCost: true,
+          partsCost: true,
         },
 
         where: {
@@ -121,7 +123,10 @@ export class DashboardService {
 
         totalInventoryValue: Number(inventoryAggregate._sum.purchaseCost || 0),
 
-        totalMaintenanceCost: Number(maintenanceAggregate._sum.repairCost || 0),
+        totalMaintenanceCost:
+          Number(maintenanceAggregate._sum.repairCost || 0) +
+          Number(maintenanceAggregate._sum.laborCost || 0) +
+          Number(maintenanceAggregate._sum.partsCost || 0),
       },
     };
   }
@@ -248,29 +253,48 @@ export class DashboardService {
   }
 
   async getInventoryValueByWarehouse() {
-    const warehouses = await this.prisma.warehouse.findMany({
-      include: {
-        equipmentItems: {
-          select: {
-            purchaseCost: true,
-          },
-        },
+    // Aggregate total purchase cost per warehouse entirely in PostgreSQL.
+    // This avoids loading every equipment item into V8 heap memory.
+    const aggregations = await this.prisma.equipmentItem.groupBy({
+      by: ['warehouseId'],
+      _sum: {
+        purchaseCost: true,
+      },
+      _count: {
+        id: true,
       },
     });
 
-    const result = warehouses.map((warehouse) => {
-      const totalValue = warehouse.equipmentItems.reduce((sum, item) => {
-        return sum + Number(item.purchaseCost || 0);
-      }, 0);
+    // Fetch only the lightweight warehouse metadata needed for the response.
+    const warehouseIds = aggregations
+      .map((a) => a.warehouseId)
+      .filter((id): id is string => id !== null);
+
+    const warehouses = await this.prisma.warehouse.findMany({
+      where: {
+        id: { in: warehouseIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+      },
+    });
+
+    // O(N_warehouses) map-lookup merge — no heap-heavy item iteration.
+    const warehouseMap = new Map(warehouses.map((w) => [w.id, w]));
+
+    const result = aggregations.map((agg) => {
+      const warehouse = agg.warehouseId
+        ? warehouseMap.get(agg.warehouseId)
+        : null;
 
       return {
-        warehouseId: warehouse.id,
-
-        warehouseName: warehouse.name,
-
-        warehouseCode: warehouse.code,
-
-        totalInventoryValue: totalValue,
+        warehouseId: agg.warehouseId,
+        warehouseName: warehouse?.name ?? 'Unknown',
+        warehouseCode: warehouse?.code ?? 'N/A',
+        itemCount: agg._count.id,
+        totalInventoryValue: Number(agg._sum.purchaseCost ?? 0),
       };
     });
 

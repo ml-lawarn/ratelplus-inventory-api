@@ -21,8 +21,26 @@ export class InventoryRepository {
       where: { id },
 
       include: {
-        warehouse: true,
-        warehouseLocation: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            parentCategoryId: true,
+          },
+        },
+        brand: {
+          select: { id: true, name: true, description: true },
+        },
+        vendor: {
+          select: { id: true, companyName: true },
+        },
+        warehouse: {
+          select: { id: true, name: true, code: true, managerId: true },
+        },
+        warehouseLocation: {
+          select: { id: true, locationCode: true },
+        },
       },
     });
   }
@@ -46,6 +64,20 @@ export class InventoryRepository {
   async count(where?: Prisma.EquipmentItemWhereInput) {
     return this.prisma.equipmentItem.count({
       where,
+    });
+  }
+
+  async update(id: string, data: Prisma.EquipmentItemUpdateInput) {
+    return this.prisma.equipmentItem.update({
+      where: { id },
+      data,
+      include: {
+        category: true,
+        brand: true,
+        vendor: true,
+        warehouse: true,
+        warehouseLocation: true,
+      },
     });
   }
 }

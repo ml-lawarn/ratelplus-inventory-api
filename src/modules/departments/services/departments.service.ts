@@ -1,12 +1,17 @@
 // src/modules/departments/services/departments.service.ts
 
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma } from '@prisma/client';
 
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { CreateDepartmentDto } from '../dto/create-department.dto';
+import { UpdateDepartmentDto } from '../dto/update-department.dto';
 import { DepartmentQueryDto } from '../dto/department-query.dto';
 
 import { DepartmentsRepository } from '../repositories/departments.repository';
@@ -86,6 +91,47 @@ export class DepartmentsService {
           totalPages: Math.ceil(total / limit),
         },
       },
+    };
+  }
+
+  async getDepartmentById(id: string) {
+    const department = await this.departmentsRepository.findById(id);
+
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+
+    return {
+      message: 'Department retrieved successfully',
+      data: department,
+    };
+  }
+
+  async updateDepartment(id: string, dto: UpdateDepartmentDto) {
+    const department = await this.departmentsRepository.findById(id);
+
+    if (!department) {
+      throw new NotFoundException('Department not found');
+    }
+
+    if (dto.name && dto.name !== department.name) {
+      const existingDepartment = await this.departmentsRepository.findByName(
+        dto.name,
+      );
+
+      if (existingDepartment) {
+        throw new ConflictException('Department already exists');
+      }
+    }
+
+    const updatedDepartment = await this.departmentsRepository.update(id, {
+      name: dto.name,
+      description: dto.description,
+    });
+
+    return {
+      message: 'Department updated successfully',
+      data: updatedDepartment,
     };
   }
 }
