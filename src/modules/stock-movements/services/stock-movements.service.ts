@@ -238,6 +238,10 @@ export class StockMovementsService {
       });
     });
 
+    const actorName =
+      [performedBy.firstName, performedBy.lastName].filter(Boolean).join(' ') ||
+      performedBy.email;
+
     await this.auditService.logActivity({
       action: 'STOCK_MOVEMENT',
 
@@ -245,7 +249,7 @@ export class StockMovementsService {
 
       entityId: movement.id,
 
-      description: `${movement.quantity} units moved`,
+      description: `${movement.movementType}: ${movement.quantity} units of ${movement.equipmentItem.equipmentName} (${movement.equipmentItem.assetTag}) moved by ${actorName}`,
 
       newValues: movement,
 

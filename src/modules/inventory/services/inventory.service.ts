@@ -251,6 +251,12 @@ export class InventoryService {
       });
     });
 
+    const actor = await this.prisma.user.findUnique({ where: { id: userId } });
+    const actorName = actor
+      ? [actor.firstName, actor.lastName].filter(Boolean).join(' ') ||
+        actor.email
+      : 'System';
+
     await this.auditService.logActivity({
       action: 'CREATE_EQUIPMENT',
 
@@ -258,11 +264,11 @@ export class InventoryService {
 
       entityId: equipmentItem.id,
 
-      description: `Equipment ${equipmentItem.equipmentName} created`,
+      description: `Equipment ${equipmentItem.equipmentName} (${equipmentItem.assetTag}) created by ${actorName}`,
 
       newValues: equipmentItem,
 
-      performedById: userId, // Set to null since this is called before user context is availabl
+      performedById: userId,
     });
 
     if (equipmentItem.quantity <= (equipmentItem.minimumStockLevel ?? 0)) {

@@ -99,13 +99,11 @@ export class MaintenanceService {
 
           priority: dto.priority,
 
-          scheduledDate: new Date(dto.scheduledDate as string | Date),
+          scheduledDate: dto.scheduledDate,
 
-          maintenanceStartDate: new Date(
-            dto.maintenanceStartDate as string | Date,
-          ),
+          maintenanceStartDate: dto.maintenanceStartDate,
 
-          maintenanceEndDate: new Date(dto.maintenanceEndDate as string | Date),
+          maintenanceEndDate: dto.maintenanceEndDate,
 
           downtimeHours: dto.downtimeHours
             ? new Prisma.Decimal(dto.downtimeHours)
