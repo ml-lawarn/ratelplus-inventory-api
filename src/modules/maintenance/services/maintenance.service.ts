@@ -201,7 +201,7 @@ export class MaintenanceService {
 
       entityId: maintenanceRecord.id,
 
-      description: 'Maintenance record created',
+      description: `Maintenance recorded for ${equipment.equipmentName} by ${[createdBy.firstName, createdBy.lastName].filter(Boolean).join(' ') || createdBy.email}`,
 
       newValues: maintenanceRecord,
 
@@ -318,7 +318,7 @@ export class MaintenanceService {
 
       entityId: updatedMaintenance.id,
 
-      description: `Maintenance status updated to ${dto.maintenanceStatus}`,
+      description: `Maintenance status of ${equipment.equipmentName} updated to ${dto.maintenanceStatus} by ${[updatedMaintenance.createdBy.firstName, updatedMaintenance.createdBy.lastName].filter(Boolean).join(' ') || updatedMaintenance.createdBy.email}`,
 
       newValues: updatedMaintenance,
 

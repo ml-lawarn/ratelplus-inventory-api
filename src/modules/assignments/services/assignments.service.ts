@@ -177,6 +177,11 @@ export class AssignmentsService {
       });
     });
 
+    const assignedToName =
+      [assignment.assignedToUser.firstName, assignment.assignedToUser.lastName]
+        .filter(Boolean)
+        .join(' ') || assignment.assignedToUser.email;
+
     await this.auditService.logActivity({
       action: 'CREATE_ASSIGNMENT',
 
@@ -184,7 +189,7 @@ export class AssignmentsService {
 
       entityId: assignment.id,
 
-      description: `Equipment assigned to user ${assignment.assignedToUser.email}`,
+      description: `Assigned ${assignment.equipmentItem.equipmentName} (${assignment.equipmentItem.assetTag}) to ${assignedToName}`,
 
       newValues: assignment,
 
@@ -294,7 +299,7 @@ export class AssignmentsService {
 
       entityId: updatedAssignment.id,
 
-      description: 'Equipment returned successfully',
+      description: `Equipment ${updatedAssignment.equipmentItem.equipmentName} returned successfully by ${[updatedAssignment.assignedToUser.firstName, updatedAssignment.assignedToUser.lastName].filter(Boolean).join(' ') || updatedAssignment.assignedToUser.email}`,
 
       newValues: updatedAssignment,
 
