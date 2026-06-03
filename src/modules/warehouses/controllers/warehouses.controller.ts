@@ -90,7 +90,7 @@ export class WarehousesController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async activateWarehouse(@Param('id') id: string) {
-    return this.warehousesService.setWarehouseActiveState(id, true);
+    return this.warehousesService.setActiveState(id, true);
   }
 
   @Patch(':id/deactivate')
@@ -103,6 +103,6 @@ export class WarehousesController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async deactivateWarehouse(@Param('id') id: string) {
-    return this.warehousesService.setWarehouseActiveState(id, false);
+    return this.warehousesService.setActiveState(id, false);
   }
 }

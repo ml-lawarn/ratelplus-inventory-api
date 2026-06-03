@@ -1,25 +1,33 @@
 // src/modules/users/services/users.service.ts
 
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
-
 import { Prisma } from '@prisma/client';
-
 import { UsersRepository } from '../repositories/users.repository';
-
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { PrismaService } from '../../../core/database/prisma.service';
 import { UserQueryDto } from '../dto/user-query.dto';
-
 import { hashPassword } from '../../../shared/utils/password.util';
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private excludePassword<T extends { password?: string }>(
+    user: T,
+  ): Omit<T, 'password'> {
+    const safeUser = { ...user };
+    delete safeUser.password;
+    return safeUser;
+  }
 
   async createUser(dto: CreateUserDto) {
     const existingUser = await this.usersRepository.findByEmail(dto.email);
@@ -48,10 +56,9 @@ export class UsersService {
         : undefined,
     });
 
-    const { password, ...safeUser } = user; // Exclude password from response
     return {
       message: 'User created successfully',
-      data: safeUser,
+      data: this.excludePassword(user),
     };
   }
 
@@ -82,6 +89,12 @@ export class UsersService {
                 mode: 'insensitive',
               },
             },
+            {
+              employeeCode: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
           ],
         }
       : {};
@@ -91,33 +104,17 @@ export class UsersService {
         where,
         skip,
         take,
-
         orderBy: {
           createdAt: 'desc',
         },
-
-        select: {
-          id: true,
-          employeeCode: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phoneNumber: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-        },
       }),
-
       this.usersRepository.count(where),
     ]);
 
     return {
       message: 'Users retrieved successfully',
-
       data: {
-        items: users,
-
+        items: users.map((u) => this.excludePassword(u)),
         meta: {
           total,
           page,
@@ -128,6 +125,22 @@ export class UsersService {
     };
   }
 
+  async findByEmail(email: string) {
+    const user = await this.usersRepository.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.excludePassword(user);
+  }
+
+  async findById(id: string) {
+    const user = await this.usersRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.excludePassword(user);
+  }
+
   async getUserById(id: string) {
     const user = await this.usersRepository.findById(id);
 
@@ -135,11 +148,9 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const { password, ...safeUser } = user;
-
     return {
       message: 'User retrieved successfully',
-      data: safeUser,
+      data: this.excludePassword(user),
     };
   }
 
@@ -150,21 +161,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (dto.email && dto.email !== user.email) {
-      const existingUser = await this.usersRepository.findByEmail(dto.email);
-
-      if (existingUser) {
-        throw new ConflictException('User with this email already exists');
-      }
-    }
-
-    const updatedUser = await this.usersRepository.update(id, {
+    const data: Prisma.UserUpdateInput = {
       employeeCode: dto.employeeCode,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      email: dto.email,
       phoneNumber: dto.phoneNumber,
       role: dto.role,
+
       department: dto.departmentId
         ? {
             connect: {
@@ -172,13 +175,13 @@ export class UsersService {
             },
           }
         : undefined,
-    });
+    };
 
-    const { password, ...safeUser } = updatedUser;
+    const updatedUser = await this.usersRepository.update(id, data);
 
     return {
       message: 'User updated successfully',
-      data: safeUser,
+      data: this.excludePassword(updatedUser),
     };
   }
 
@@ -189,12 +192,28 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    if (!isActive) {
+      // Check for active assignments before deactivation
+      const activeAssignmentsCount =
+        await this.prisma.equipmentAssignment.count({
+          where: {
+            assignedToUserId: id,
+            assignmentStatus: 'ASSIGNED',
+          },
+        });
+
+      if (activeAssignmentsCount > 0) {
+        throw new ConflictException(
+          `Cannot deactivate user with ${activeAssignmentsCount} active equipment assignments`,
+        );
+      }
+    }
+
     const updatedUser = await this.usersRepository.update(id, { isActive });
-    const { password, ...safeUser } = updatedUser;
 
     return {
       message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
-      data: safeUser,
+      data: this.excludePassword(updatedUser),
     };
   }
 }
