@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { AssignmentStatus, EquipmentStatus, Prisma } from '@prisma/client';
+import {
+  AssignmentStatus,
+  EquipmentStatus,
+  NotificationType,
+  Prisma,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 
@@ -190,6 +195,7 @@ export class AssignmentsService {
       assignment.assignedToUserId,
       'Equipment Assigned',
       `You have been assigned ${assignment.equipmentItem.equipmentName}`,
+      NotificationType.SUCCESS,
     );
 
     return {
@@ -299,6 +305,7 @@ export class AssignmentsService {
       updatedAssignment.assignedToUserId,
       'Equipment Returned',
       `${updatedAssignment.equipmentItem.equipmentName} has been returned successfully`,
+      NotificationType.INFO,
     );
 
     return {

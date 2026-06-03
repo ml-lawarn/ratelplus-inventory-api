@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { EquipmentStatus, MaintenanceStatus, Prisma } from '@prisma/client';
+import {
+  EquipmentStatus,
+  MaintenanceStatus,
+  NotificationType,
+  Prisma,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 
@@ -181,7 +186,8 @@ export class MaintenanceService {
         await this.notificationsService.createNotification(
           createdBy.id,
           'Maintenance Scheduled',
-          `Maintenance record scheduled for ${equipment.equipmentName}`,
+          `${equipment.equipmentName} has been scheduled for maintenance`,
+          NotificationType.INFO,
         );
       }
 
@@ -207,6 +213,7 @@ export class MaintenanceService {
         createdBy.id,
         'Maintenance Record Created',
         `Maintenance record for ${equipment.equipmentName} has been created successfully`,
+        NotificationType.INFO,
       );
     }
 
@@ -220,6 +227,7 @@ export class MaintenanceService {
   async updateMaintenanceStatus(
     maintenanceId: string,
     dto: UpdateMaintenanceStatusDto,
+    userId: string,
   ) {
     const maintenance =
       await this.maintenanceRepository.findById(maintenanceId);
@@ -239,11 +247,9 @@ export class MaintenanceService {
         data: {
           maintenanceStatus: dto.maintenanceStatus,
 
-          maintenanceStartDate: new Date(
-            dto.maintenanceStartDate as string | Date,
-          ),
+          maintenanceStartDate: dto.maintenanceStartDate,
 
-          maintenanceEndDate: new Date(dto.maintenanceEndDate as string | Date),
+          maintenanceEndDate: dto.maintenanceEndDate,
 
           resolutionNotes: dto.resolutionNotes,
         },
@@ -279,6 +285,7 @@ export class MaintenanceService {
           updatedRecord.createdById,
           'Maintenance Completed',
           `Maintenance for ${equipment.equipmentName} has been completed`,
+          NotificationType.SUCCESS,
         );
       }
 
@@ -297,6 +304,7 @@ export class MaintenanceService {
           updatedRecord.createdById,
           'Maintenance In Progress',
           `Maintenance for ${equipment.equipmentName} is now in progress`,
+          NotificationType.INFO,
         );
       }
 
@@ -313,6 +321,8 @@ export class MaintenanceService {
       description: `Maintenance status updated to ${dto.maintenanceStatus}`,
 
       newValues: updatedMaintenance,
+
+      performedById: userId,
     });
 
     return {

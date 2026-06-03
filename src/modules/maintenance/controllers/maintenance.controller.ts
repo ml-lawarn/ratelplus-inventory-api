@@ -73,8 +73,9 @@ export class MaintenanceController {
     @Param('id') id: string,
 
     @Body() dto: UpdateMaintenanceStatusDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.maintenanceService.updateMaintenanceStatus(id, dto);
+    return this.maintenanceService.updateMaintenanceStatus(id, dto, user.sub);
   }
 
   @Get()

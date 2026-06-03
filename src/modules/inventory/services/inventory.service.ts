@@ -32,6 +32,7 @@ import { InventoryQueryDto } from '../dto/inventory-query.dto';
 import { InventoryRepository } from '../repositories/inventory.repository';
 
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { AuditService } from '../../audit/services/audit.service';
 
 @Injectable()
 export class InventoryService {
@@ -51,9 +52,11 @@ export class InventoryService {
     private readonly warehouseLocationsRepository: WarehouseLocationsRepository,
 
     private readonly notificationsService: NotificationsService,
+
+    private readonly auditService: AuditService,
   ) {}
 
-  async createEquipmentItem(dto: CreateEquipmentItemDto) {
+  async createEquipmentItem(dto: CreateEquipmentItemDto, userId: string) {
     const existingAsset = await this.inventoryRepository.findByAssetTag(
       dto.assetTag,
     );
@@ -248,6 +251,20 @@ export class InventoryService {
       });
     });
 
+    await this.auditService.logActivity({
+      action: 'CREATE_EQUIPMENT',
+
+      entityType: 'EquipmentItem',
+
+      entityId: equipmentItem.id,
+
+      description: `Equipment ${equipmentItem.equipmentName} created`,
+
+      newValues: equipmentItem,
+
+      performedById: userId, // Set to null since this is called before user context is availabl
+    });
+
     if (equipmentItem.quantity <= (equipmentItem.minimumStockLevel ?? 0)) {
       const warehouseManagerId = equipmentItem.warehouse?.managerId;
 
@@ -391,7 +408,11 @@ export class InventoryService {
     };
   }
 
-  async updateEquipmentItem(id: string, dto: UpdateEquipmentItemDto) {
+  async updateEquipmentItem(
+    id: string,
+    dto: UpdateEquipmentItemDto,
+    userId: string,
+  ) {
     const equipment = await this.inventoryRepository.findById(id);
 
     if (!equipment) {
@@ -559,6 +580,22 @@ export class InventoryService {
         : undefined,
     });
 
+    await this.auditService.logActivity({
+      action: 'UPDATE_EQUIPMENT',
+
+      entityType: 'EquipmentItem',
+
+      entityId: updatedEquipment.id,
+
+      description: `Equipment ${updatedEquipment.equipmentName} updated`,
+
+      oldValues: equipment,
+
+      newValues: updatedEquipment,
+
+      performedById: userId,
+    });
+
     if (
       updatedEquipment.minimumStockLevel &&
       updatedEquipment.quantity <= updatedEquipment.minimumStockLevel
@@ -583,7 +620,11 @@ export class InventoryService {
     };
   }
 
-  async updateEquipmentStatus(id: string, dto: UpdateEquipmentStatusDto) {
+  async updateEquipmentStatus(
+    id: string,
+    dto: UpdateEquipmentStatusDto,
+    userId: string,
+  ) {
     const equipment = await this.inventoryRepository.findById(id);
 
     if (!equipment) {
@@ -616,6 +657,25 @@ export class InventoryService {
       default:
         return;
     }
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_EQUIPMENT_STATUS',
+
+      entityType: 'EquipmentItem',
+
+      entityId: updatedEquipment.id,
+
+      description: `Status changed from ${equipment.status} to ${dto.status}`,
+
+      oldValues: {
+        status: equipment.status,
+      },
+
+      newValues: {
+        status: dto.status,
+      },
+      performedById: userId,
+    });
 
     return {
       message: 'Equipment status updated successfully',
