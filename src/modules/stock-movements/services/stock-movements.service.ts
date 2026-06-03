@@ -24,6 +24,8 @@ import { StockMovementQueryDto } from '../dto/stock-movement-query.dto';
 
 import { StockMovementsRepository } from '../repositories/stock-movements.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class StockMovementsService {
   constructor(
@@ -36,6 +38,8 @@ export class StockMovementsService {
     private readonly warehouseLocationsRepository: WarehouseLocationsRepository,
 
     private readonly usersRepository: UsersRepository,
+
+    private readonly auditService: AuditService,
   ) {}
 
   async createStockMovement(dto: CreateStockMovementDto, userId: string) {
@@ -232,6 +236,24 @@ export class StockMovementsService {
           },
         },
       });
+    });
+
+    const actorName =
+      [performedBy.firstName, performedBy.lastName].filter(Boolean).join(' ') ||
+      performedBy.email;
+
+    await this.auditService.logActivity({
+      action: 'STOCK_MOVEMENT',
+
+      entityType: 'StockMovement',
+
+      entityId: movement.id,
+
+      description: `${movement.movementType}: ${movement.quantity} units of ${movement.equipmentItem.equipmentName} (${movement.equipmentItem.assetTag}) moved by ${actorName}`,
+
+      newValues: movement,
+
+      performedById: userId,
     });
 
     return {

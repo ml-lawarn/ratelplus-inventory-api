@@ -32,6 +32,8 @@ import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
+import { type JwtPayload } from 'src/shared/interfaces/jwt-payload.interface';
+import { CurrentUser } from 'src/core/decorators/current-user.decorator';
 
 @ApiTags('Inventory')
 @ApiBearerAuth()
@@ -49,8 +51,11 @@ export class InventoryController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createEquipmentItem(@Body() dto: CreateEquipmentItemDto) {
-    return this.inventoryService.createEquipmentItem(dto);
+  async createEquipmentItem(
+    @Body() dto: CreateEquipmentItemDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.inventoryService.createEquipmentItem(dto, user.sub);
   }
 
   @Get()
@@ -91,8 +96,9 @@ export class InventoryController {
   async updateEquipmentItem(
     @Param('id') id: string,
     @Body() dto: UpdateEquipmentItemDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.inventoryService.updateEquipmentItem(id, dto);
+    return this.inventoryService.updateEquipmentItem(id, dto, user.sub);
   }
 
   @Patch(':id/status')
@@ -107,7 +113,8 @@ export class InventoryController {
   async updateEquipmentStatus(
     @Param('id') id: string,
     @Body() dto: UpdateEquipmentStatusDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.inventoryService.updateEquipmentStatus(id, dto);
+    return this.inventoryService.updateEquipmentStatus(id, dto, user.sub);
   }
 }

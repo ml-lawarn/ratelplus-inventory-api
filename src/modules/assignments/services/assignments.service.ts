@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { AssignmentStatus, EquipmentStatus, Prisma } from '@prisma/client';
+import {
+  AssignmentStatus,
+  EquipmentStatus,
+  NotificationType,
+  Prisma,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 
@@ -172,6 +177,11 @@ export class AssignmentsService {
       });
     });
 
+    const assignedToName =
+      [assignment.assignedToUser.firstName, assignment.assignedToUser.lastName]
+        .filter(Boolean)
+        .join(' ') || assignment.assignedToUser.email;
+
     await this.auditService.logActivity({
       action: 'CREATE_ASSIGNMENT',
 
@@ -179,7 +189,7 @@ export class AssignmentsService {
 
       entityId: assignment.id,
 
-      description: `Equipment assigned to user ${assignment.assignedToUser.email}`,
+      description: `Assigned ${assignment.equipmentItem.equipmentName} (${assignment.equipmentItem.assetTag}) to ${assignedToName}`,
 
       newValues: assignment,
 
@@ -190,6 +200,7 @@ export class AssignmentsService {
       assignment.assignedToUserId,
       'Equipment Assigned',
       `You have been assigned ${assignment.equipmentItem.equipmentName}`,
+      NotificationType.SUCCESS,
     );
 
     return {
@@ -288,7 +299,7 @@ export class AssignmentsService {
 
       entityId: updatedAssignment.id,
 
-      description: 'Equipment returned successfully',
+      description: `Equipment ${updatedAssignment.equipmentItem.equipmentName} returned successfully by ${[updatedAssignment.assignedToUser.firstName, updatedAssignment.assignedToUser.lastName].filter(Boolean).join(' ') || updatedAssignment.assignedToUser.email}`,
 
       newValues: updatedAssignment,
 
@@ -299,6 +310,7 @@ export class AssignmentsService {
       updatedAssignment.assignedToUserId,
       'Equipment Returned',
       `${updatedAssignment.equipmentItem.equipmentName} has been returned successfully`,
+      NotificationType.INFO,
     );
 
     return {

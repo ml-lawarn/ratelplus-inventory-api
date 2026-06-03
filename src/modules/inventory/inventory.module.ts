@@ -20,10 +20,13 @@ import { InventoryRepository } from './repositories/inventory.repository';
 
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
   imports: [
     CategoriesModule,
     BrandsModule,
+    AuditModule,
     NotificationsModule,
     VendorsModule,
     WarehousesModule,

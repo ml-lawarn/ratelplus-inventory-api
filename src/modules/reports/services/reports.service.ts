@@ -109,6 +109,7 @@ export class ReportsService {
             checkoutDate: 'asc',
           },
         },
+        maintenanceRecords: true,
       },
     });
 
@@ -132,6 +133,8 @@ export class ReportsService {
         assetTag: item.assetTag,
         equipmentName: item.equipmentName,
         status: item.status,
+        assignmentCount: item.assignments.length,
+        maintenanceCount: item.maintenanceRecords.length,
         utilisationPercent: Number(((assignedMs / ageMs) * 100).toFixed(2)),
       };
     });

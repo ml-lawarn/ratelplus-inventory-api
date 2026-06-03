@@ -14,8 +14,15 @@ import { StockMovementsService } from './services/stock-movements.service';
 
 import { StockMovementsRepository } from './repositories/stock-movements.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
-  imports: [InventoryModule, WarehouseLocationsModule, UsersModule],
+  imports: [
+    InventoryModule,
+    WarehouseLocationsModule,
+    UsersModule,
+    AuditModule,
+  ],
 
   controllers: [StockMovementsController],
 
