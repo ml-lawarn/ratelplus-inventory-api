@@ -31,15 +31,15 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 import { Role } from '../../../shared/enums/role.enum';
 
 @ApiTags('Users')
-@ApiBearerAuth()
+// @ApiBearerAuth()
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // POST /api/v1/users
   @Post()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create user' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -49,7 +49,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'List users' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -59,7 +59,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -69,7 +69,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update user profile fields' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -79,7 +79,7 @@ export class UsersController {
   }
 
   @Patch(':id/activate')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Activate user' })
   @ApiResponse({ status: 200, description: 'User activated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -89,7 +89,7 @@ export class UsersController {
   }
 
   @Patch(':id/deactivate')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  // @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Deactivate user' })
   @ApiResponse({ status: 200, description: 'User deactivated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
