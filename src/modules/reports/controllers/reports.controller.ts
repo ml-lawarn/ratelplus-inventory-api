@@ -8,6 +8,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { Throttle } from '@nestjs/throttler';
+
+import { THROTTLE_LIMITS } from 'src/core/constants/throttle.constants';
+
 import { ReportsService } from '../services/reports.service';
 
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
@@ -20,6 +24,9 @@ import { Role } from '../../../shared/enums/role.enum';
 @ApiBearerAuth()
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Throttle({
+  default: THROTTLE_LIMITS.REPORTS,
+})
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
