@@ -1,4 +1,5 @@
 // prisma/seed.ts
+import 'dotenv/config'; // Load environment variables from .env file
 
 import {
   PrismaClient,
@@ -7,7 +8,7 @@ import {
   MaintenanceStatus,
 } from '@prisma/client';
 
-import { Role } from 'src/shared/enums/role.enum';
+import { Role } from '../src/shared/enums/role.enum';
 
 import * as bcrypt from 'bcrypt';
 
