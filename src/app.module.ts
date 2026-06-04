@@ -4,6 +4,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 
+import { THROTTLE_LIMITS } from './core/constants/throttle.constants';
+
 import { PrismaModule } from './core/database/prisma.module';
 import { HealthController } from './core/health/health.controller';
 import { AuthModule } from './modules/auth/auth.module';
@@ -36,13 +38,7 @@ import { envValidationSchema } from './core/config/env.validation';
       },
     }),
     // Global rate limiting: 100 requests per 60 seconds per IP.
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60_000,
-        limit: 100,
-      },
-    ]),
+    ThrottlerModule.forRoot([THROTTLE_LIMITS.GLOBAL]),
     PrismaModule,
     AuthModule,
     UsersModule,

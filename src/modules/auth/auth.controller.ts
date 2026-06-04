@@ -7,6 +7,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { THROTTLE_LIMITS } from 'src/core/constants/throttle.constants';
 
 import { AuthService } from './auth.service';
 
@@ -24,6 +26,9 @@ import type { JwtPayload } from '../../shared/interfaces/jwt-payload.interface';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({
+    default: THROTTLE_LIMITS.AUTH,
+  })
   @Post('login')
   @ApiOperation({ summary: 'Authenticate user' })
   @ApiResponse({ status: 201, description: 'Login successful' })
