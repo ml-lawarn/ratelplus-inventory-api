@@ -43,7 +43,7 @@ export class NotificationsService {
 
     if (recipient?.email) {
       try {
-        await this.emailService.sendEmail({
+        void this.emailService.sendEmail({
           to: recipient.email,
 
           subject: title,
