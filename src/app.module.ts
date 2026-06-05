@@ -24,6 +24,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { EmailModule } from './infrastructure/email/email.module';
 import { envValidationSchema } from './core/config/env.validation';
 
 @Module({
@@ -56,6 +57,7 @@ import { envValidationSchema } from './core/config/env.validation';
     AuditModule,
     NotificationsModule,
     ReportsModule,
+    EmailModule,
   ],
   controllers: [HealthController],
   providers: [
