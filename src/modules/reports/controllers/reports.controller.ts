@@ -1,12 +1,14 @@
 // src/modules/reports/controllers/reports.controller.ts
 
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { Throttle } from '@nestjs/throttler';
 
@@ -98,5 +100,123 @@ export class ReportsController {
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
   async assetUtilisation() {
     return this.reportsService.assetUtilisationReport();
+  }
+
+  @Get('inventory-summary/pdf')
+  @ApiOperation({ summary: 'Download inventory summary report as PDF' })
+  @ApiResponse({
+    status: 200,
+    description: 'Inventory summary PDF generated successfully',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  async inventorySummaryPdf(@Res() res: Response) {
+    const pdf = await this.reportsService.inventorySummaryPdf();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+
+      'Content-Disposition': 'attachment; filename=inventory-summary.pdf',
+    });
+
+    res.send(pdf);
+  }
+
+  @Get('maintenance-costs/pdf')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  async maintenanceCostsPdf(@Res() res: Response) {
+    const pdf = await this.reportsService.maintenanceCostPdf();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+
+      'Content-Disposition': 'attachment; filename=maintenance-costs.pdf',
+    });
+
+    res.send(pdf);
+  }
+
+  @Get('assignments/pdf')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  async assignmentsPdf(@Res() res: Response) {
+    const pdf = await this.reportsService.assignmentsPdf();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+
+      'Content-Disposition': 'attachment; filename=assignments.pdf',
+    });
+
+    res.send(pdf);
+  }
+
+  @Get('warranty-expiry/pdf')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  @ApiOperation({ summary: 'Download warranty expiry report as PDF' })
+  @ApiResponse({
+    status: 200,
+    description: 'Warranty expiry PDF generated successfully',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    description: 'Number of days until warranty expiry (default: 30)',
+    example: 30,
+    schema: {
+      type: 'integer',
+      enum: [30, 60, 90],
+      default: 30,
+    },
+  })
+  async warrantyExpiryPdf(@Res() res: Response, @Query('days') days?: string) {
+    const requestedDays = days ? Number(days) : 30;
+    const reportWindow = [30, 60, 90].includes(requestedDays)
+      ? requestedDays
+      : 30;
+
+    const pdf = await this.reportsService.warrantyExpiryPdf(reportWindow);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+
+      'Content-Disposition': `attachment; filename=warranty-expiry-${reportWindow}-days.pdf`,
+    });
+
+    res.send(pdf);
+  }
+
+  @Get('asset-utilisation/pdf')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER)
+  async assetUtilisationPdf(@Res() res: Response) {
+    const pdf = await this.reportsService.assetUtilisationPdf();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+
+      'Content-Disposition': 'attachment; filename=asset-utilisation.pdf',
+    });
+
+    res.send(pdf);
   }
 }
