@@ -13,6 +13,7 @@ Enterprise-grade Inventory Management System built with NestJS, Prisma, and Post
 - Dashboard Analytics
 - Audit Logging
 - Swagger API Documentation
+- Email Service
 
 ## Tech Stack
 
