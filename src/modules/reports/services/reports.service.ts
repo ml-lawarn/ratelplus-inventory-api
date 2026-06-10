@@ -6,11 +6,11 @@ import { AssignmentStatus } from '@prisma/client';
 import { PrismaService } from '../../../core/database/prisma.service';
 
 import { PdfService } from '../../../infrastructure/pdf/pdf.service';
-import { buildInventorySummaryPdf } from 'src/infrastructure/pdf/templates/inventory-summary.template';
-import { buildMaintenanceCostPdf } from 'src/infrastructure/pdf/templates/maintenance-cost.template';
-import { buildWarrantyExpiryPdf } from 'src/infrastructure/pdf/templates/warranty-expiry.template';
-import { buildAssetUtilisationPdf } from 'src/infrastructure/pdf/templates/asset-utilisation.template';
-import { buildAssignmentsPdf } from 'src/infrastructure/pdf/templates/assignments.template';
+import { buildInventorySummaryPdf } from '../../../infrastructure/pdf/templates/inventory-summary.template';
+import { buildMaintenanceCostPdf } from '../../../infrastructure/pdf/templates/maintenance-cost.template';
+import { buildWarrantyExpiryPdf } from '../../../infrastructure/pdf/templates/warranty-expiry.template';
+import { buildAssetUtilisationPdf } from '../../../infrastructure/pdf/templates/asset-utilisation.template';
+import { buildAssignmentsPdf } from '../../../infrastructure/pdf/templates/assignments.template';
 
 @Injectable()
 export class ReportsService {

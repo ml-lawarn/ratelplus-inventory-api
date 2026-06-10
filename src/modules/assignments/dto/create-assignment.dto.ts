@@ -59,4 +59,12 @@ export class CreateAssignmentDto {
   @IsInt()
   @Min(1)
   assignedQuantity?: number;
+
+  @ApiPropertyOptional({
+    description: 'Source location ID (where equipment is being deployed from)',
+    example: '7e641827-2f96-4d3c-96bc-a35cfac40733',
+  })
+  @IsOptional()
+  @IsUUID()
+  sourceLocationId?: string;
 }

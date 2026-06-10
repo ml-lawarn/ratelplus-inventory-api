@@ -155,8 +155,8 @@ export class InventoryService {
       }
     }
 
-    const equipmentItem = await this.prisma.$transaction(async (tx) => {
-      return tx.equipmentItem.create({
+    const equipmentItem = await this.prisma.$transaction(async (tx: any) => {
+      const item = await tx.equipmentItem.create({
         data: {
           assetTag: dto.assetTag,
 
@@ -249,6 +249,20 @@ export class InventoryService {
           warehouseLocation: true,
         },
       });
+
+      // Initialize InventoryBalance
+      if (dto.warehouseId && dto.warehouseLocationId) {
+        await tx.inventoryBalance.create({
+          data: {
+            equipmentItemId: item.id,
+            warehouseId: dto.warehouseId,
+            warehouseLocationId: dto.warehouseLocationId,
+            quantity: item.quantity,
+          },
+        });
+      }
+
+      return item;
     });
 
     const actor = await this.prisma.user.findUnique({ where: { id: userId } });

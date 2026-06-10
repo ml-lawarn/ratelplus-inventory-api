@@ -5,8 +5,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
-import { EmailService } from '../../../infrastructure/email/email.service';
-import { UsersRepository } from '../../users/repositories/users.repository';
+// import { EmailService } from '../../../infrastructure/email/email.service';
+// import { UsersRepository } from '../../users/repositories/users.repository';
 
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
@@ -17,8 +17,8 @@ import { NotificationQueryDto } from '../dto/notification-query.dto';
 export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
-    private readonly emailService: EmailService,
-    private readonly usersRepository: UsersRepository,
+    // private readonly emailService: EmailService,
+    // private readonly usersRepository: UsersRepository,
   ) {}
 
   async createNotification(
@@ -39,24 +39,24 @@ export class NotificationsService {
       },
     });
 
-    const recipient = await this.usersRepository.findById(recipientId);
+    // const recipient = await this.usersRepository.findById(recipientId);
 
-    if (recipient?.email) {
-      try {
-        void this.emailService.sendEmail({
-          to: recipient.email,
+    // if (recipient?.email) {
+    //   try {
+    //     void this.emailService.sendEmail({
+    //       to: recipient.email,
 
-          subject: title,
+    //       subject: title,
 
-          html: `
-          <h2>${title}</h2>
-          <p>${message}</p>
-        `,
-        });
-      } catch (error) {
-        console.error('Failed to send notification email', error);
-      }
-    }
+    //       html: `
+    //       <h2>${title}</h2>
+    //       <p>${message}</p>
+    //     `,
+    //     });
+    //   } catch (error) {
+    //     console.error('Failed to send notification email', error);
+    //   }
+    // }
 
     return notification;
   }

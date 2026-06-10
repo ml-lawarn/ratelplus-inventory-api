@@ -31,6 +31,8 @@ import { AssignmentsRepository } from '../repositories/assignments.repository';
 
 import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { EmailService } from '../../../infrastructure/email/email.service';
+import { assignmentEmailTemplate } from '../../../infrastructure/email/templates/assignment-email.template';
 
 @Injectable()
 export class AssignmentsService {
@@ -46,6 +48,8 @@ export class AssignmentsService {
     private readonly auditService: AuditService,
 
     private readonly notificationsService: NotificationsService,
+
+    private readonly emailService: EmailService,
   ) {}
 
   async createAssignment(dto: CreateAssignmentDto, userId: string) {
@@ -94,6 +98,85 @@ export class AssignmentsService {
     }
 
     const assignment = await this.prisma.$transaction(async (tx) => {
+      // 1. Decrement quantity from InventoryBalance at the source location
+      if (dto.sourceLocationId) {
+        let balance = await (tx as any).inventoryBalance.findUnique({
+          where: {
+            equipmentItemId_warehouseLocationId: {
+              equipmentItemId: equipment.id,
+              warehouseLocationId: dto.sourceLocationId,
+            },
+          },
+        });
+
+        // Initialize balance if it doesn't exist but item is at this location
+        if (
+          !balance &&
+          equipment.warehouseLocationId === dto.sourceLocationId
+        ) {
+          balance = await (tx as any).inventoryBalance.create({
+            data: {
+              equipmentItemId: equipment.id,
+              warehouseLocationId: dto.sourceLocationId,
+              warehouseId: equipment.warehouseId,
+              quantity: equipment.quantity,
+            },
+          });
+        }
+
+        if (!balance || balance.quantity < assignedQuantity) {
+          throw new BadRequestException(
+            `Insufficient quantity at the selected source location. Available: ${balance?.quantity || 0}`,
+          );
+        }
+
+        await (tx as any).inventoryBalance.update({
+          where: { id: balance.id },
+          data: { quantity: { decrement: assignedQuantity } },
+        });
+      } else {
+        // If no source location provided, try to find ANY balance that has enough
+        let balances = await (tx as any).inventoryBalance.findMany({
+          where: {
+            equipmentItemId: equipment.id,
+            quantity: { gte: assignedQuantity },
+          },
+        });
+
+        // If no balances found, check if the main equipment record has enough (legacy)
+        if (
+          balances.length === 0 &&
+          equipment.warehouseLocationId &&
+          equipment.quantity >= assignedQuantity
+        ) {
+          const newBalance = await (tx as any).inventoryBalance.create({
+            data: {
+              equipmentItemId: equipment.id,
+              warehouseLocationId: equipment.warehouseLocationId,
+              warehouseId: equipment.warehouseId,
+              quantity: equipment.quantity,
+            },
+          });
+          balances = [newBalance];
+        }
+
+        if (balances.length === 0) {
+          throw new BadRequestException(
+            'No location has sufficient quantity for this deployment',
+          );
+        }
+
+        // Take from the first available location
+        await (tx as any).inventoryBalance.update({
+          where: { id: balances[0].id },
+          data: { quantity: { decrement: assignedQuantity } },
+        });
+
+        // Use this location as sourceLocationId
+        dto.sourceLocationId = balances[0].warehouseLocationId;
+      }
+
+      // 2. Update total quantity in EquipmentItem
       try {
         await tx.equipmentItem.update({
           where: {
@@ -134,23 +217,13 @@ export class AssignmentsService {
 
           assignedQuantity,
 
-          equipmentItem: {
-            connect: {
-              id: equipment.id,
-            },
-          },
+          equipmentItemId: equipment.id,
 
-          assignedToUser: {
-            connect: {
-              id: dto.assignedToUserId,
-            },
-          },
+          sourceLocationId: dto.sourceLocationId || null,
 
-          assignedByUser: {
-            connect: {
-              id: userId,
-            },
-          },
+          assignedToUserId: dto.assignedToUserId,
+
+          assignedByUserId: userId,
         },
 
         include: {
@@ -202,6 +275,18 @@ export class AssignmentsService {
       `You have been assigned ${assignment.equipmentItem.equipmentName}`,
       NotificationType.SUCCESS,
     );
+
+    void this.emailService.sendEmail({
+      to: assignment.assignedToUser.email,
+      subject: 'Equipment Assigned',
+      html: assignmentEmailTemplate(
+        assignment.equipmentItem.equipmentName,
+        assignment.equipmentItem.assetTag,
+        assignedToName,
+        'ASSIGNED',
+        assignment.expectedReturnDate?.toLocaleDateString(),
+      ),
+    });
 
     return {
       message: 'Equipment assigned successfully',
@@ -278,6 +363,30 @@ export class AssignmentsService {
           },
         });
 
+        // 3. Increment quantity back to the source InventoryBalance
+        if ((assignment as any).sourceLocationId) {
+          const location = await tx.warehouseLocation.findUnique({
+            where: { id: (assignment as any).sourceLocationId },
+            select: { warehouseId: true },
+          });
+
+          await (tx as any).inventoryBalance.upsert({
+            where: {
+              equipmentItemId_warehouseLocationId: {
+                equipmentItemId: equipment.id,
+                warehouseLocationId: (assignment as any).sourceLocationId,
+              },
+            },
+            update: { quantity: { increment: assignment.assignedQuantity } },
+            create: {
+              equipmentItemId: equipment.id,
+              warehouseLocationId: (assignment as any).sourceLocationId,
+              warehouseId: location?.warehouseId || '',
+              quantity: assignment.assignedQuantity,
+            },
+          });
+        }
+
         return updated;
       } catch (error) {
         if (
@@ -312,6 +421,22 @@ export class AssignmentsService {
       `${updatedAssignment.equipmentItem.equipmentName} has been returned successfully`,
       NotificationType.INFO,
     );
+
+    void this.emailService.sendEmail({
+      to: updatedAssignment.assignedToUser.email,
+      subject: 'Equipment Returned',
+      html: assignmentEmailTemplate(
+        updatedAssignment.equipmentItem.equipmentName,
+        updatedAssignment.equipmentItem.assetTag,
+        [
+          updatedAssignment.assignedToUser.firstName,
+          updatedAssignment.assignedToUser.lastName,
+        ]
+          .filter(Boolean)
+          .join(' ') || updatedAssignment.assignedToUser.email,
+        'RETURNED',
+      ),
+    });
 
     return {
       message: 'Equipment returned successfully',
