@@ -35,6 +35,10 @@ import { AuditService } from '../../audit/services/audit.service';
 
 import { NotificationsService } from '../../notifications/services/notifications.service';
 
+import { EmailService } from '../../../infrastructure/email/email.service';
+
+import { maintenanceEmailTemplate } from '../../../infrastructure/email/templates/maintenance-email.template';
+
 @Injectable()
 export class MaintenanceService {
   constructor(
@@ -51,6 +55,8 @@ export class MaintenanceService {
     private readonly auditService: AuditService,
 
     private readonly notificationsService: NotificationsService,
+
+    private readonly emailService: EmailService,
   ) {}
 
   async createMaintenanceRecord(
@@ -172,21 +178,36 @@ export class MaintenanceService {
       ) {
         isMaintenanceScheduledOrInProgress = true;
         await tx.equipmentItem.update({
-          where: {
-            id: equipment.id,
-          },
-
-          data: {
-            status: EquipmentStatus.MAINTENANCE,
-          },
+          where: { id: equipment.id },
+          data: { status: EquipmentStatus.MAINTENANCE },
         });
+
+        const statusLabel =
+          dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS
+            ? 'Started'
+            : 'Scheduled';
 
         await this.notificationsService.createNotification(
           createdBy.id,
-          'Maintenance Scheduled',
-          `${equipment.equipmentName} has been scheduled for maintenance`,
+          `Maintenance ${statusLabel}`,
+          `${equipment.equipmentName} is now in maintenance status (${dto.maintenanceStatus})`,
           NotificationType.INFO,
         );
+
+        void this.emailService.sendEmail({
+          to: createdBy.email,
+          subject: `Maintenance ${statusLabel}`,
+          html: maintenanceEmailTemplate(
+            equipment.equipmentName,
+            equipment.assetTag,
+            dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS
+              ? 'STARTED'
+              : 'SCHEDULED',
+            dto.scheduledDate
+              ? new Date(dto.scheduledDate).toLocaleDateString()
+              : undefined,
+          ),
+        });
       }
 
       return record;
@@ -268,23 +289,58 @@ export class MaintenanceService {
         },
       });
 
-      if (dto.maintenanceStatus === MaintenanceStatus.COMPLETED) {
-        await tx.equipmentItem.update({
+      if (
+        dto.maintenanceStatus === MaintenanceStatus.COMPLETED ||
+        dto.maintenanceStatus === MaintenanceStatus.CANCELLED
+      ) {
+        // Check if equipment has any active assignments
+        const activeAssignment = await tx.equipmentAssignment.findFirst({
           where: {
-            id: equipment.id,
-          },
-
-          data: {
-            status: EquipmentStatus.AVAILABLE,
+            equipmentItemId: equipment.id,
+            assignmentStatus: 'ASSIGNED',
           },
         });
 
+        const targetStatus = activeAssignment
+          ? EquipmentStatus.DEPLOYED
+          : EquipmentStatus.AVAILABLE;
+
+        await tx.equipmentItem.update({
+          where: { id: equipment.id },
+          data: { status: targetStatus },
+        });
+
+        const statusLabel =
+          dto.maintenanceStatus === MaintenanceStatus.COMPLETED
+            ? 'Completed'
+            : 'Cancelled';
+
         await this.notificationsService.createNotification(
           updatedRecord.createdById,
-          'Maintenance Completed',
-          `Maintenance for ${equipment.equipmentName} has been completed`,
-          NotificationType.SUCCESS,
+          `Maintenance ${statusLabel}`,
+          `Maintenance for ${equipment.equipmentName} has been ${statusLabel.toLowerCase()}`,
+          dto.maintenanceStatus === MaintenanceStatus.COMPLETED
+            ? NotificationType.SUCCESS
+            : NotificationType.WARNING,
         );
+
+        const creator = await tx.user.findUnique({
+          where: { id: updatedRecord.createdById },
+        });
+
+        if (creator) {
+          void this.emailService.sendEmail({
+            to: creator.email,
+            subject: `Maintenance ${statusLabel}`,
+            html: maintenanceEmailTemplate(
+              equipment.equipmentName,
+              equipment.assetTag,
+              dto.maintenanceStatus === MaintenanceStatus.COMPLETED
+                ? 'COMPLETED'
+                : 'CANCELLED',
+            ),
+          });
+        }
       }
 
       if (dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS) {
@@ -304,6 +360,22 @@ export class MaintenanceService {
           `Maintenance for ${equipment.equipmentName} is now in progress`,
           NotificationType.INFO,
         );
+
+        const creator = await tx.user.findUnique({
+          where: { id: updatedRecord.createdById },
+        });
+
+        if (creator) {
+          void this.emailService.sendEmail({
+            to: creator.email,
+            subject: 'Maintenance In Progress',
+            html: maintenanceEmailTemplate(
+              equipment.equipmentName,
+              equipment.assetTag,
+              'STARTED',
+            ),
+          });
+        }
       }
 
       return updatedRecord;

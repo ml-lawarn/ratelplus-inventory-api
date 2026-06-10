@@ -13,12 +13,15 @@ import { PrismaService } from '../../../core/database/prisma.service';
 import { UserQueryDto } from '../dto/user-query.dto';
 import { hashPassword } from '../../../shared/utils/password.util';
 import { buildPagination } from '../../../shared/utils/pagination.util';
+import { EmailService } from '../../../infrastructure/email/email.service';
+import { userEmailTemplate } from '../../../infrastructure/email/templates/user-email.template';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
   ) {}
 
   private excludePassword<T extends { password?: string }>(
@@ -54,6 +57,12 @@ export class UsersService {
             },
           }
         : undefined,
+    });
+
+    void this.emailService.sendEmail({
+      to: user.email,
+      subject: 'Welcome to RatelPlus',
+      html: userEmailTemplate(`${user.firstName} ${user.lastName}`, 'CREATED'),
     });
 
     return {
@@ -210,6 +219,15 @@ export class UsersService {
     }
 
     const updatedUser = await this.usersRepository.update(id, { isActive });
+
+    void this.emailService.sendEmail({
+      to: updatedUser.email,
+      subject: `Account ${isActive ? 'Activated' : 'Deactivated'}`,
+      html: userEmailTemplate(
+        `${updatedUser.firstName} ${updatedUser.lastName}`,
+        isActive ? 'ACTIVATED' : 'DEACTIVATED',
+      ),
+    });
 
     return {
       message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,

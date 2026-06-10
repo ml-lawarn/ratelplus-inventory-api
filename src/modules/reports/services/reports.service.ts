@@ -5,9 +5,19 @@ import { AssignmentStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 
+import { PdfService } from '../../../infrastructure/pdf/pdf.service';
+import { buildInventorySummaryPdf } from '../../../infrastructure/pdf/templates/inventory-summary.template';
+import { buildMaintenanceCostPdf } from '../../../infrastructure/pdf/templates/maintenance-cost.template';
+import { buildWarrantyExpiryPdf } from '../../../infrastructure/pdf/templates/warranty-expiry.template';
+import { buildAssetUtilisationPdf } from '../../../infrastructure/pdf/templates/asset-utilisation.template';
+import { buildAssignmentsPdf } from '../../../infrastructure/pdf/templates/assignments.template';
+
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pdfService: PdfService,
+  ) {}
 
   async inventorySummaryReport() {
     const [totalItems, totalWarehouses, totalCategories] = await Promise.all([
@@ -99,6 +109,46 @@ export class ReportsService {
         items,
       },
     };
+  }
+
+  async inventorySummaryPdf() {
+    const report = await this.inventorySummaryReport();
+
+    return this.pdfService.generatePdf((doc) => {
+      buildInventorySummaryPdf(doc, report.data);
+    });
+  }
+
+  async maintenanceCostPdf() {
+    const report = await this.maintenanceCostReport();
+
+    return this.pdfService.generatePdf((doc) => {
+      buildMaintenanceCostPdf(doc, report.data);
+    });
+  }
+
+  async warrantyExpiryPdf(days = 30) {
+    const report = await this.warrantyExpiryReport(days);
+
+    return this.pdfService.generatePdf((doc) => {
+      buildWarrantyExpiryPdf(doc, report.data);
+    });
+  }
+
+  async assignmentsPdf() {
+    const report = await this.assignmentReport();
+
+    return this.pdfService.generatePdf((doc) => {
+      buildAssignmentsPdf(doc, report.data);
+    });
+  }
+
+  async assetUtilisationPdf() {
+    const report = await this.assetUtilisationReport();
+
+    return this.pdfService.generatePdf((doc) => {
+      buildAssetUtilisationPdf(doc, report.data);
+    });
   }
 
   async assetUtilisationReport() {

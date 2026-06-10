@@ -41,6 +41,16 @@ export class InventoryRepository {
         warehouseLocation: {
           select: { id: true, locationCode: true },
         },
+        inventoryBalances: {
+          include: {
+            warehouse: {
+              select: { id: true, name: true, code: true },
+            },
+            warehouseLocation: {
+              select: { id: true, locationCode: true },
+            },
+          },
+        },
       },
     });
   }

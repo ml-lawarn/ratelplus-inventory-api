@@ -8,7 +8,11 @@ import { UsersService } from './services/users.service';
 
 import { UsersRepository } from './repositories/users.repository';
 
+import { EmailModule } from '../../infrastructure/email/email.module';
+
 @Module({
+  imports: [EmailModule],
+
   controllers: [UsersController],
 
   providers: [UsersService, UsersRepository],

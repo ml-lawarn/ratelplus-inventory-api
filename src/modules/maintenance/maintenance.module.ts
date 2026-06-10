@@ -14,6 +14,8 @@ import { MaintenanceService } from './services/maintenance.service';
 
 import { MaintenanceRepository } from './repositories/maintenance.repository';
 
+import { EmailModule } from '../../infrastructure/email/email.module';
+
 import { AuditModule } from '../audit/audit.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -25,6 +27,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     VendorsModule,
     AuditModule,
     NotificationsModule,
+    EmailModule,
   ],
 
   controllers: [MaintenanceController],

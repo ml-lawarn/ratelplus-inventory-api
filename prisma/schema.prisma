@@ -199,6 +199,7 @@ model Warehouse {
   locations WarehouseLocation[]
 
   equipmentItems EquipmentItem[]
+  inventoryBalances InventoryBalance[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -225,9 +226,11 @@ model WarehouseLocation {
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
   equipmentItems EquipmentItem[]
+  inventoryBalances InventoryBalance[]
 
   sourceMovements StockMovement[] @relation("SourceLocation")
   destinationMovements StockMovement[] @relation("DestinationLocation")
+  assignedEquipments EquipmentAssignment[] @relation("AssignmentSourceLocation")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -235,6 +238,30 @@ model WarehouseLocation {
   @@unique([warehouseId, locationCode])
   @@index([warehouseId])
   @@map("warehouse_locations")
+}
+
+model InventoryBalance {
+  id String @id @default(uuid())
+
+  quantity Int @default(0)
+
+  equipmentItemId String @map("equipment_item_id")
+  equipmentItem   EquipmentItem @relation(fields: [equipmentItemId], references: [id], onDelete: Cascade)
+
+  warehouseLocationId String @map("warehouse_location_id")
+  warehouseLocation   WarehouseLocation @relation(fields: [warehouseLocationId], references: [id])
+
+  warehouseId String @map("warehouse_id")
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([equipmentItemId, warehouseLocationId])
+  @@index([equipmentItemId])
+  @@index([warehouseLocationId])
+  @@index([warehouseId])
+  @@map("inventory_balances")
 }
 
 model EquipmentItem {
@@ -287,6 +314,7 @@ model EquipmentItem {
   stockMovements StockMovement[]
   assignments EquipmentAssignment[]
   maintenanceRecords MaintenanceRecord[]
+  inventoryBalances InventoryBalance[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -351,6 +379,9 @@ model EquipmentAssignment {
   assignedQuantity Int  @default(1) @map("assigned_quantity")
   equipmentItemId String  @map("equipment_item_id")
   equipmentItem EquipmentItem @relation(fields: [equipmentItemId], references: [id])
+
+  sourceLocationId String? @map("source_location_id")
+  sourceLocation   WarehouseLocation? @relation("AssignmentSourceLocation", fields: [sourceLocationId], references: [id])
 
   assignedToUserId String @map("assigned_to_user_id")
   assignedToUser User @relation("AssignedTo", fields: [assignedToUserId], references: [id])

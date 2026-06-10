@@ -13,9 +13,16 @@ import { AssignmentsService } from './services/assignments.service';
 import { AssignmentsRepository } from './repositories/assignments.repository';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailModule } from '../../infrastructure/email/email.module';
 
 @Module({
-  imports: [InventoryModule, UsersModule, AuditModule, NotificationsModule],
+  imports: [
+    InventoryModule,
+    UsersModule,
+    AuditModule,
+    NotificationsModule,
+    EmailModule,
+  ],
 
   controllers: [AssignmentsController],
 
