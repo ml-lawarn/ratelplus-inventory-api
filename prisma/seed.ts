@@ -2,12 +2,22 @@
 import 'dotenv/config'; // Load environment variables from .env file
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
 import { Role } from '../src/shared/enums/role.enum';
 
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+// 🔑 1. Create the native PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const adapter = new PrismaPg(pool);
+
+// 🔑 3. Instantiate PrismaClient using exclusively the adapter option
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Seeding database...');
