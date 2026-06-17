@@ -136,22 +136,22 @@ export class DashboardService {
       where: {
         OR: [
           {
+            // Condition 1: Out of stock
             quantity: {
               lte: 0,
             },
           },
-
           {
+            // Condition 2: Quantity dropped below dynamic threshold
             AND: [
               {
                 minimumStockLevel: {
                   not: null,
                 },
               },
-
               {
                 quantity: {
-                  lte: 10,
+                  lte: this.prisma.equipmentItem.fields.minimumStockLevel,
                 },
               },
             ],
