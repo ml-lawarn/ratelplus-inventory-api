@@ -3,6 +3,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -41,6 +42,7 @@ import { maintenanceEmailTemplate } from '../../../infrastructure/email/template
 
 @Injectable()
 export class MaintenanceService {
+  private readonly logger = new Logger(MaintenanceService.name);
   constructor(
     private readonly prisma: PrismaService,
 
@@ -194,20 +196,27 @@ export class MaintenanceService {
           NotificationType.INFO,
         );
 
-        void this.emailService.sendEmail({
-          to: createdBy.email,
-          subject: `Maintenance ${statusLabel}`,
-          html: maintenanceEmailTemplate(
-            equipment.equipmentName,
-            equipment.assetTag,
-            dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS
-              ? 'STARTED'
-              : 'SCHEDULED',
-            dto.scheduledDate
-              ? new Date(dto.scheduledDate).toLocaleDateString()
-              : undefined,
-          ),
-        });
+        this.emailService
+          .sendEmail({
+            to: createdBy.email,
+            subject: `Maintenance ${statusLabel}`,
+            html: maintenanceEmailTemplate(
+              equipment.equipmentName,
+              equipment.assetTag,
+              dto.maintenanceStatus === MaintenanceStatus.IN_PROGRESS
+                ? 'STARTED'
+                : 'SCHEDULED',
+              dto.scheduledDate
+                ? new Date(dto.scheduledDate).toLocaleDateString()
+                : undefined,
+            ),
+          })
+          .catch((err) => {
+            this.logger.error(
+              'Background execution thread failed completely:',
+              err,
+            );
+          });
       }
 
       return record;
@@ -329,17 +338,24 @@ export class MaintenanceService {
         });
 
         if (creator) {
-          void this.emailService.sendEmail({
-            to: creator.email,
-            subject: `Maintenance ${statusLabel}`,
-            html: maintenanceEmailTemplate(
-              equipment.equipmentName,
-              equipment.assetTag,
-              dto.maintenanceStatus === MaintenanceStatus.COMPLETED
-                ? 'COMPLETED'
-                : 'CANCELLED',
-            ),
-          });
+          this.emailService
+            .sendEmail({
+              to: creator.email,
+              subject: `Maintenance ${statusLabel}`,
+              html: maintenanceEmailTemplate(
+                equipment.equipmentName,
+                equipment.assetTag,
+                dto.maintenanceStatus === MaintenanceStatus.COMPLETED
+                  ? 'COMPLETED'
+                  : 'CANCELLED',
+              ),
+            })
+            .catch((err) => {
+              this.logger.error(
+                'Background execution thread failed completely:',
+                err,
+              );
+            });
         }
       }
 
@@ -366,15 +382,22 @@ export class MaintenanceService {
         });
 
         if (creator) {
-          void this.emailService.sendEmail({
-            to: creator.email,
-            subject: 'Maintenance In Progress',
-            html: maintenanceEmailTemplate(
-              equipment.equipmentName,
-              equipment.assetTag,
-              'STARTED',
-            ),
-          });
+          this.emailService
+            .sendEmail({
+              to: creator.email,
+              subject: 'Maintenance In Progress',
+              html: maintenanceEmailTemplate(
+                equipment.equipmentName,
+                equipment.assetTag,
+                'STARTED',
+              ),
+            })
+            .catch((err) => {
+              this.logger.error(
+                'Background execution thread failed completely:',
+                err,
+              );
+            });
         }
       }
 

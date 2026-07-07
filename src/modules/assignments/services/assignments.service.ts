@@ -33,9 +33,11 @@ import { AuditService } from '../../audit/services/audit.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import { EmailService } from '../../../infrastructure/email/email.service';
 import { assignmentEmailTemplate } from '../../../infrastructure/email/templates/assignment-email.template';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class AssignmentsService {
+  private readonly logger = new Logger(AssignmentsService.name);
   constructor(
     private readonly prisma: PrismaService,
 
@@ -276,17 +278,24 @@ export class AssignmentsService {
       NotificationType.SUCCESS,
     );
 
-    void this.emailService.sendEmail({
-      to: assignment.assignedToUser.email,
-      subject: 'Equipment Assigned',
-      html: assignmentEmailTemplate(
-        assignment.equipmentItem.equipmentName,
-        assignment.equipmentItem.assetTag,
-        assignedToName,
-        'ASSIGNED',
-        assignment.expectedReturnDate?.toLocaleDateString(),
-      ),
-    });
+    this.emailService
+      .sendEmail({
+        to: assignment.assignedToUser.email,
+        subject: 'Equipment Assigned',
+        html: assignmentEmailTemplate(
+          assignment.equipmentItem.equipmentName,
+          assignment.equipmentItem.assetTag,
+          assignedToName,
+          'ASSIGNED',
+          assignment.expectedReturnDate?.toLocaleDateString(),
+        ),
+      })
+      .catch((err) => {
+        this.logger.error(
+          'Background execution thread failed completely:',
+          err,
+        );
+      });
 
     return {
       message: 'Equipment assigned successfully',
@@ -422,21 +431,28 @@ export class AssignmentsService {
       NotificationType.INFO,
     );
 
-    void this.emailService.sendEmail({
-      to: updatedAssignment.assignedToUser.email,
-      subject: 'Equipment Returned',
-      html: assignmentEmailTemplate(
-        updatedAssignment.equipmentItem.equipmentName,
-        updatedAssignment.equipmentItem.assetTag,
-        [
-          updatedAssignment.assignedToUser.firstName,
-          updatedAssignment.assignedToUser.lastName,
-        ]
-          .filter(Boolean)
-          .join(' ') || updatedAssignment.assignedToUser.email,
-        'RETURNED',
-      ),
-    });
+    void this.emailService
+      .sendEmail({
+        to: updatedAssignment.assignedToUser.email,
+        subject: 'Equipment Returned',
+        html: assignmentEmailTemplate(
+          updatedAssignment.equipmentItem.equipmentName,
+          updatedAssignment.equipmentItem.assetTag,
+          [
+            updatedAssignment.assignedToUser.firstName,
+            updatedAssignment.assignedToUser.lastName,
+          ]
+            .filter(Boolean)
+            .join(' ') || updatedAssignment.assignedToUser.email,
+          'RETURNED',
+        ),
+      })
+      .catch((err) => {
+        this.logger.error(
+          'Background execution thread failed completely:',
+          err,
+        );
+      });
 
     return {
       message: 'Equipment returned successfully',

@@ -2,6 +2,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+import * as fs from 'fs'; // Add fs module to verify files exist
+import { Attachment } from 'nodemailer/lib/mailer'; // Import the precise type definition
 import { SendEmailOptions } from './interfaces/send-email.interface';
 
 @Injectable()
@@ -14,9 +16,19 @@ export class EmailService implements OnModuleInit {
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
+
+    // Fix paths to look relative to the execution root directory inside Docker (/app)
     const basePath = isProduction
-      ? path.join(__dirname, '..', '..', 'storage', 'images')
+      ? path.join(
+          process.cwd(),
+          'dist',
+          'src',
+          'infrastructure',
+          'storage',
+          'images',
+        )
       : path.join(process.cwd(), 'src', 'infrastructure', 'storage', 'images');
+
     this.logoPath = path.join(basePath, 'ratel-logo.png');
     this.coverImagePath = path.join(basePath, 'ratel-cover-image.jpeg');
   }
@@ -36,14 +48,14 @@ export class EmailService implements OnModuleInit {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === 'true',
+      secure: process.env.SMTP_SECURE === 'true', // Recommended: Use 465 and true for production VPS
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
-      connectionTimeout: 20000,
-      greetingTimeout: 20000,
-      socketTimeout: 20000,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     this.logger.log('Email transporter initialized');
@@ -62,31 +74,43 @@ export class EmailService implements OnModuleInit {
         subject: options.subject,
         html: options.html,
         text: options.text,
-        attachments: this.getDefaultAttachments(),
+        attachments: this.getValidAttachments(), // Safely filter out missing image assets
       });
 
-      this.logger.log(`Email sent to ${options.to}`);
+      this.logger.log(`Email successfully sent to ${options.to}`);
     } catch (error) {
       this.logger.error(
-        `Failed to send email to ${options.to}:`,
-        error.stack || error.message,
+        `CRITICAL error sending email to ${options.to}: ${error.message}`,
+        error.stack,
       );
-      // Don't rethrow - let the application continue running
     }
   }
 
-  getDefaultAttachments() {
-    return [
-      {
+  private getValidAttachments() {
+    // Explicitly type the array to prevent the 'never' error
+    const attachments: Attachment[] = [];
+
+    // Safely check if files exist inside Docker image volume before attaching
+    if (fs.existsSync(this.logoPath)) {
+      attachments.push({
         filename: 'ratel-logo.png',
         path: this.logoPath,
         cid: 'ratel-logo',
-      },
-      {
+      });
+    } else {
+      this.logger.warn(`Email Asset Missing: ${this.logoPath}`);
+    }
+
+    if (fs.existsSync(this.coverImagePath)) {
+      attachments.push({
         filename: 'ratel-cover-image.jpeg',
         path: this.coverImagePath,
         cid: 'ratel-cover-image',
-      },
-    ];
+      });
+    } else {
+      this.logger.warn(`Email Asset Missing: ${this.coverImagePath}`);
+    }
+
+    return attachments;
   }
 }
