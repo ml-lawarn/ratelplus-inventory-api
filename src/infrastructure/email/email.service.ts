@@ -11,25 +11,18 @@ export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter;
 
-  private readonly logoPath: string;
+  // private readonly logoPath: string;
   private readonly coverImagePath: string;
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Fix paths to look relative to the execution root directory inside Docker (/app)
+    // FIXED: Removed 'src' from the production path array to match your actual dist layout
     const basePath = isProduction
-      ? path.join(
-          process.cwd(),
-          'dist',
-          'src',
-          'infrastructure',
-          'storage',
-          'images',
-        )
+      ? path.join(process.cwd(), 'dist', 'infrastructure', 'storage', 'images')
       : path.join(process.cwd(), 'src', 'infrastructure', 'storage', 'images');
 
-    this.logoPath = path.join(basePath, 'ratel-logo.png');
+    // this.logoPath = path.join(basePath, 'ratel-logo.png');
     this.coverImagePath = path.join(basePath, 'ratel-cover-image.jpeg');
   }
 
@@ -91,15 +84,15 @@ export class EmailService implements OnModuleInit {
     const attachments: Attachment[] = [];
 
     // Safely check if files exist inside Docker image volume before attaching
-    if (fs.existsSync(this.logoPath)) {
-      attachments.push({
-        filename: 'ratel-logo.png',
-        path: this.logoPath,
-        cid: 'ratel-logo',
-      });
-    } else {
-      this.logger.warn(`Email Asset Missing: ${this.logoPath}`);
-    }
+    // if (fs.existsSync(this.logoPath)) {
+    //   attachments.push({
+    //     filename: 'ratel-logo.png',
+    //     path: this.logoPath,
+    //     cid: 'ratel-logo',
+    //   });
+    // } else {
+    //   this.logger.warn(`Email Asset Missing: ${this.logoPath}`);
+    // }
 
     if (fs.existsSync(this.coverImagePath)) {
       attachments.push({
