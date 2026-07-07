@@ -15,9 +15,12 @@ import { hashPassword } from '../../../shared/utils/password.util';
 import { buildPagination } from '../../../shared/utils/pagination.util';
 import { EmailService } from '../../../infrastructure/email/email.service';
 import { userEmailTemplate } from '../../../infrastructure/email/templates/user-email.template';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly prisma: PrismaService,
@@ -59,11 +62,21 @@ export class UsersService {
         : undefined,
     });
 
-    void this.emailService.sendEmail({
-      to: user.email,
-      subject: 'Welcome to RatelPlus',
-      html: userEmailTemplate(`${user.firstName} ${user.lastName}`, 'CREATED'),
-    });
+    this.emailService
+      .sendEmail({
+        to: user.email,
+        subject: 'Welcome to RatelPlus',
+        html: userEmailTemplate(
+          `${user.firstName} ${user.lastName}`,
+          'CREATED',
+        ),
+      })
+      .catch((err) => {
+        this.logger.error(
+          'Background execution thread failed completely:',
+          err,
+        );
+      });
 
     return {
       message: 'User created successfully',
@@ -220,14 +233,21 @@ export class UsersService {
 
     const updatedUser = await this.usersRepository.update(id, { isActive });
 
-    void this.emailService.sendEmail({
-      to: updatedUser.email,
-      subject: `Account ${isActive ? 'Activated' : 'Deactivated'}`,
-      html: userEmailTemplate(
-        `${updatedUser.firstName} ${updatedUser.lastName}`,
-        isActive ? 'ACTIVATED' : 'DEACTIVATED',
-      ),
-    });
+    this.emailService
+      .sendEmail({
+        to: updatedUser.email,
+        subject: `Account ${isActive ? 'Activated' : 'Deactivated'}`,
+        html: userEmailTemplate(
+          `${updatedUser.firstName} ${updatedUser.lastName}`,
+          isActive ? 'ACTIVATED' : 'DEACTIVATED',
+        ),
+      })
+      .catch((err) => {
+        this.logger.error(
+          'Background execution thread failed completely:',
+          err,
+        );
+      });
 
     return {
       message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,

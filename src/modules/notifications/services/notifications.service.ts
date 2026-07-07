@@ -5,9 +5,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
-// import { EmailService } from '../../../infrastructure/email/email.service';
-// import { UsersRepository } from '../../users/repositories/users.repository';
-
 import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { NotificationsRepository } from '../repositories/notifications.repository';
@@ -38,25 +35,6 @@ export class NotificationsService {
         },
       },
     });
-
-    // const recipient = await this.usersRepository.findById(recipientId);
-
-    // if (recipient?.email) {
-    //   try {
-    //     void this.emailService.sendEmail({
-    //       to: recipient.email,
-
-    //       subject: title,
-
-    //       html: `
-    //       <h2>${title}</h2>
-    //       <p>${message}</p>
-    //     `,
-    //     });
-    //   } catch (error) {
-    //     console.error('Failed to send notification email', error);
-    //   }
-    // }
 
     return notification;
   }
