@@ -95,6 +95,21 @@ export class MaintenanceService {
       }
     }
 
+    const equipmentsUnderMaintenance =
+      await this.maintenanceRepository.findScheduledOrInProgress(
+        dto.equipmentItemId,
+      );
+
+    if (equipmentsUnderMaintenance.length > 0) {
+      equipmentsUnderMaintenance.forEach((record) => {
+        if (record.equipmentItemId === dto.equipmentItemId) {
+          throw new BadRequestException(
+            `${equipment.equipmentName} is already under maintenance`,
+          );
+        }
+      });
+    }
+
     const maintenanceRecord = await this.prisma.$transaction(async (tx) => {
       const record = await tx.maintenanceRecord.create({
         data: {
@@ -133,9 +148,7 @@ export class MaintenanceService {
 
           resolutionNotes: dto.resolutionNotes,
 
-          nextMaintenanceDate: new Date(
-            dto.nextMaintenanceDate as string | Date,
-          ),
+          nextMaintenanceDate: dto.nextMaintenanceDate,
 
           equipmentItem: {
             connect: {

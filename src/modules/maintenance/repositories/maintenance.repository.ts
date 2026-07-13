@@ -2,7 +2,7 @@
 
 import { Injectable } from '@nestjs/common';
 
-import { Prisma } from '@prisma/client';
+import { MaintenanceStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 
@@ -22,6 +22,23 @@ export class MaintenanceRepository {
 
       include: {
         equipmentItem: true,
+      },
+    });
+  }
+
+  // Find maintenance records for a specific equipment item that are either scheduled or in progress
+  async findScheduledOrInProgress(equipmentItemId: string) {
+    return this.prisma.maintenanceRecord.findMany({
+      where: {
+        equipmentItemId,
+        maintenanceStatus: {
+          in: [MaintenanceStatus.SCHEDULED, MaintenanceStatus.IN_PROGRESS],
+        },
+      },
+      select: {
+        id: true,
+        maintenanceStatus: true,
+        equipmentItemId: true,
       },
     });
   }
