@@ -349,6 +349,8 @@ export class StockMovementsService {
 
       description: `${movement.movementType}: ${movement.quantity} units of ${movement.equipmentItem.equipmentName} (${movement.equipmentItem.assetTag}) moved by ${actorName}`,
 
+      remarks: movement.remarks || '',
+
       newValues: movement,
 
       performedById: userId,
