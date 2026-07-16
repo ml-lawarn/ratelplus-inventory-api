@@ -28,6 +28,12 @@ export class CreateAuditLogDto {
   description?: string;
 
   @ApiPropertyOptional({
+    description: 'Audit remarks',
+    example: 'Assignment approved by supervisor',
+  })
+  remarks?: string;
+
+  @ApiPropertyOptional({
     description: 'Request IP address',
     example: '127.0.0.1',
   })

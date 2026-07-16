@@ -26,6 +26,8 @@ export class AuditService {
 
       description: dto.description,
 
+      remarks: dto.remarks,
+
       ipAddress: dto.ipAddress,
 
       userAgent: dto.userAgent,
@@ -76,6 +78,12 @@ export class AuditService {
           },
           {
             description: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            remarks: {
               contains: search,
               mode: 'insensitive',
             },
