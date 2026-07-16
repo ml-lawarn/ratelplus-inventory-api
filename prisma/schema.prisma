@@ -455,6 +455,8 @@ model AuditLog {
 
   description String?
 
+  remarks String?
+
   ipAddress String? @map("ip_address")
   userAgent String? @map("user_agent")
 
