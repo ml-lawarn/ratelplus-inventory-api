@@ -14,8 +14,6 @@ import { NotificationQueryDto } from '../dto/notification-query.dto';
 export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
-    // private readonly emailService: EmailService,
-    // private readonly usersRepository: UsersRepository,
   ) {}
 
   async createNotification(

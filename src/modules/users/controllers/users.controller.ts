@@ -29,6 +29,8 @@ import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
+import { CurrentUser } from 'src/core/decorators/current-user.decorator';
+import type { JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -44,8 +46,11 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createUser(@Body() dto: CreateUserDto) {
-    return this.usersService.createUser(dto);
+  async createUser(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.createUser(dto, user.sub);
   }
 
   @Get()
@@ -74,8 +79,12 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.updateUser(id, dto);
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.updateUser(id, dto, user.sub);
   }
 
   @Patch(':id/activate')
@@ -84,8 +93,8 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User activated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async activateUser(@Param('id') id: string) {
-    return this.usersService.setUserActiveState(id, true);
+  async activateUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.usersService.setUserActiveState(id, true, user.sub);
   }
 
   @Patch(':id/deactivate')
@@ -94,7 +103,10 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User deactivated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async deactivateUser(@Param('id') id: string) {
-    return this.usersService.setUserActiveState(id, false);
+  async deactivateUser(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.setUserActiveState(id, false, user.sub);
   }
 }
