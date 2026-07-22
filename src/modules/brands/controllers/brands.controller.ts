@@ -48,7 +48,14 @@ export class BrandsController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'List brands' })
   @ApiResponse({ status: 200, description: 'Brands retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -58,7 +65,14 @@ export class BrandsController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get brand by ID' })
   @ApiResponse({ status: 200, description: 'Brand retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

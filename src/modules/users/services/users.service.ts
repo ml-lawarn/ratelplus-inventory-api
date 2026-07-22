@@ -14,6 +14,7 @@ import { UserQueryDto } from '../dto/user-query.dto';
 import { hashPassword } from '../../../shared/utils/password.util';
 import { buildPagination } from '../../../shared/utils/pagination.util';
 import { EmailService } from '../../../infrastructure/email/email.service';
+import { AuditService } from 'src/modules/audit/services/audit.service';
 import { userEmailTemplate } from '../../../infrastructure/email/templates/user-email.template';
 import { Logger } from '@nestjs/common';
 
@@ -25,6 +26,7 @@ export class UsersService {
     private readonly usersRepository: UsersRepository,
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly auditService: AuditService,
   ) {}
 
   private excludePassword<T extends { password?: string }>(
@@ -35,9 +37,11 @@ export class UsersService {
     return safeUser;
   }
 
-  async createUser(dto: CreateUserDto) {
+  async createUser(dto: CreateUserDto, userId: string) {
     const existingUser = await this.usersRepository.findByEmail(dto.email);
+    const performedBy = await this.usersRepository.findById(userId);
 
+    if (!performedBy) throw new NotFoundException('Admin or Actor not found');
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
@@ -60,6 +64,18 @@ export class UsersService {
             },
           }
         : undefined,
+    });
+
+    const actorName =
+      [performedBy.firstName, performedBy.lastName].filter(Boolean).join(' ') ||
+      performedBy.email;
+
+    await this.auditService.logActivity({
+      action: 'USER_CREATED',
+      entityType: 'User',
+      entityId: user.id,
+      description: `${user.firstName + ' ' + user.lastName}${user.lastName.endsWith('s') ? "'" : "'s"} account has created by ${actorName}.`,
+      performedById: userId,
     });
 
     this.emailService
@@ -176,9 +192,11 @@ export class UsersService {
     };
   }
 
-  async updateUser(id: string, dto: UpdateUserDto) {
+  async updateUser(id: string, dto: UpdateUserDto, userId: string) {
+    const performedBy = await this.usersRepository.findById(userId);
     const user = await this.usersRepository.findById(id);
 
+    if (!performedBy) throw new NotFoundException('Admin or Actor not found');
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -201,15 +219,29 @@ export class UsersService {
 
     const updatedUser = await this.usersRepository.update(id, data);
 
+    const actorName =
+      [performedBy.firstName, performedBy.lastName].filter(Boolean).join(' ') ||
+      performedBy.email;
+
+    await this.auditService.logActivity({
+      action: 'USER_UPDATED',
+      entityType: 'User',
+      entityId: updatedUser.id,
+      description: `${updatedUser.firstName + ' ' + updatedUser.lastName}${updatedUser.lastName.endsWith('s') ? "'" : "'s"} account has updated by ${actorName}.`,
+      performedById: userId,
+    });
+
     return {
       message: 'User updated successfully',
       data: this.excludePassword(updatedUser),
     };
   }
 
-  async setUserActiveState(id: string, isActive: boolean) {
+  async setUserActiveState(id: string, isActive: boolean, userId: string) {
+    const performedBy = await this.usersRepository.findById(userId);
     const user = await this.usersRepository.findById(id);
 
+    if (!performedBy) throw new NotFoundException('Admin or Actor not found');
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -232,6 +264,17 @@ export class UsersService {
     }
 
     const updatedUser = await this.usersRepository.update(id, { isActive });
+    const actorName =
+      [performedBy.firstName, performedBy.lastName].filter(Boolean).join(' ') ||
+      performedBy.email;
+
+    await this.auditService.logActivity({
+      action: 'USER_ACTIVATION',
+      entityType: 'User',
+      entityId: updatedUser.id,
+      description: `${updatedUser.firstName + ' ' + updatedUser.lastName}${updatedUser.lastName.endsWith('s') ? "'" : "'s"} account has been ${updatedUser.isActive ? 'Activated' : 'Deactivated'} by ${actorName}.`,
+      performedById: userId,
+    });
 
     this.emailService
       .sendEmail({

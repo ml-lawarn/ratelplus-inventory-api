@@ -58,7 +58,14 @@ export class StockMovementsController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'List stock movements' })
   @ApiResponse({
     status: 200,
@@ -71,7 +78,14 @@ export class StockMovementsController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get stock movement by ID' })
   @ApiResponse({
     status: 200,

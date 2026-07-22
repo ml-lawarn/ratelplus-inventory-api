@@ -79,7 +79,14 @@ export class MaintenanceController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'List maintenance records' })
   @ApiResponse({
     status: 200,
@@ -92,7 +99,14 @@ export class MaintenanceController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get maintenance record by ID' })
   @ApiResponse({
     status: 200,

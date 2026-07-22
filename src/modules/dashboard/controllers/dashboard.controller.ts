@@ -26,7 +26,14 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('summary')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get dashboard summary' })
   @ApiResponse({
     status: 200,

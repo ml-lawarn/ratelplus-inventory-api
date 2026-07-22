@@ -55,7 +55,14 @@ export class WarehouseLocationsController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'List warehouse locations' })
   @ApiResponse({
     status: 200,
@@ -68,7 +75,14 @@ export class WarehouseLocationsController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get warehouse location by ID' })
   @ApiResponse({
     status: 200,

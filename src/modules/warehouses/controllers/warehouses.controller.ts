@@ -48,7 +48,14 @@ export class WarehousesController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'List warehouses' })
   @ApiResponse({
     status: 200,
@@ -61,7 +68,14 @@ export class WarehousesController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF)
+  @Roles(
+    Role.ADMIN,
+    Role.SUPER_ADMIN,
+    Role.MANAGER,
+    Role.STAFF,
+    Role.TRAINEE,
+    Role.INTERN,
+  )
   @ApiOperation({ summary: 'Get warehouse by ID' })
   @ApiResponse({ status: 200, description: 'Warehouse retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

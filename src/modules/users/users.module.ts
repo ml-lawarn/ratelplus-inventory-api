@@ -9,9 +9,10 @@ import { UsersService } from './services/users.service';
 import { UsersRepository } from './repositories/users.repository';
 
 import { EmailModule } from '../../infrastructure/email/email.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, AuditModule],
 
   controllers: [UsersController],
 
