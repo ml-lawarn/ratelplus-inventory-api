@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 // src/modules/assignments/services/assignments.service.ts
 
 import {
@@ -418,6 +419,8 @@ export class AssignmentsService {
       entityId: updatedAssignment.id,
 
       description: `Equipment ${updatedAssignment.equipmentItem.equipmentName} returned successfully by ${[updatedAssignment.assignedToUser.firstName, updatedAssignment.assignedToUser.lastName].filter(Boolean).join(' ') || updatedAssignment.assignedToUser.email}`,
+
+      remarks: dto.remarks || updatedAssignment.remarks || '',
 
       newValues: updatedAssignment,
 
