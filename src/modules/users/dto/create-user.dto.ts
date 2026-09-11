@@ -5,7 +5,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  MinLength,
+  IsStrongPassword,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -43,9 +43,19 @@ export class CreateUserDto {
   @IsEnum(Role)
   role: Role;
 
-  @ApiProperty({ description: 'User password', example: 'password123' })
+  @ApiProperty({
+    description:
+      'User password (min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 symbol)',
+    example: 'Str0ng!Pass',
+  })
   @IsString()
-  @MinLength(6)
+  @IsStrongPassword({
+    minLength: 8,
+    minLowercase: 1,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+  })
   password: string;
 
   @ApiPropertyOptional({
