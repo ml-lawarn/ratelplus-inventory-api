@@ -22,12 +22,21 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       switch (exception.code) {
-        case 'P2002':
+        case 'P2002': {
+          const target = exception.meta?.target;
+          const fields = Array.isArray(target)
+            ? target.join(', ')
+            : typeof target === 'string'
+              ? target
+              : undefined;
+
           return response.status(HttpStatus.CONFLICT).json({
             success: false,
-            message: 'Duplicate record exists',
-            error: exception.meta,
+            message: fields
+              ? `A record with this ${fields} already exists`
+              : 'Duplicate record exists',
           });
+        }
 
         case 'P2025':
           return response.status(HttpStatus.NOT_FOUND).json({

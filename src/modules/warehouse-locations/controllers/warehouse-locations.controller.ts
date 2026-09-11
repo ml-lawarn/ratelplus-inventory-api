@@ -32,6 +32,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Warehouse Locations')
 @ApiBearerAuth()
 @Controller('warehouse-locations')
@@ -50,8 +53,14 @@ export class WarehouseLocationsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createWarehouseLocation(@Body() dto: CreateWarehouseLocationDto) {
-    return this.warehouseLocationsService.createWarehouseLocation(dto);
+  async createWarehouseLocation(
+    @Body() dto: CreateWarehouseLocationDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.warehouseLocationsService.createWarehouseLocation(
+      dto,
+      user.sub,
+    );
   }
 
   @Get()
@@ -106,7 +115,12 @@ export class WarehouseLocationsController {
   async updateWarehouseLocation(
     @Param('id') id: string,
     @Body() dto: UpdateWarehouseLocationDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.warehouseLocationsService.updateWarehouseLocation(id, dto);
+    return this.warehouseLocationsService.updateWarehouseLocation(
+      id,
+      dto,
+      user.sub,
+    );
   }
 }

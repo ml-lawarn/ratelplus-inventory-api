@@ -16,11 +16,16 @@ import { CategoryQueryDto } from '../dto/category-query.dto';
 
 import { CategoriesRepository } from '../repositories/categories.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly categoriesRepository: CategoriesRepository) {}
+  constructor(
+    private readonly categoriesRepository: CategoriesRepository,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createCategory(dto: CreateCategoryDto) {
+  async createCategory(dto: CreateCategoryDto, userId: string) {
     const existingCategory = await this.categoriesRepository.findByName(
       dto.name,
     );
@@ -50,6 +55,15 @@ export class CategoriesService {
             },
           }
         : undefined,
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_CATEGORY',
+      entityType: 'Category',
+      entityId: category.id,
+      description: `Category ${category.name} created`,
+      newValues: category,
+      performedById: userId,
     });
 
     return {
@@ -134,7 +148,7 @@ export class CategoriesService {
     };
   }
 
-  async updateCategory(id: string, dto: UpdateCategoryDto) {
+  async updateCategory(id: string, dto: UpdateCategoryDto, userId: string) {
     const category = await this.categoriesRepository.findById(id);
 
     if (!category) {
@@ -175,6 +189,16 @@ export class CategoriesService {
             },
           }
         : undefined,
+    });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_CATEGORY',
+      entityType: 'Category',
+      entityId: updatedCategory.id,
+      description: `Category ${updatedCategory.name} updated`,
+      oldValues: category,
+      newValues: updatedCategory,
+      performedById: userId,
     });
 
     return {

@@ -58,16 +58,25 @@ async function bootstrap() {
   const prismaService = app.get(PrismaService);
   prismaService.enableShutdownHooks(app);
 
-  const config = new DocumentBuilder()
-    .setTitle('RatelPlus Inventory API')
-    .setDescription('Enterprise Inventory Management System API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  // Swagger exposes the full API surface (routes, DTO shapes, field names) to
+  // anyone who requests it. Keep it off in production unless explicitly
+  // opted into via ENABLE_SWAGGER=true (e.g. for a staging environment).
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_SWAGGER === 'true';
 
-  const document = SwaggerModule.createDocument(app, config);
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle('RatelPlus Inventory API')
+      .setDescription('Enterprise Inventory Management System API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 

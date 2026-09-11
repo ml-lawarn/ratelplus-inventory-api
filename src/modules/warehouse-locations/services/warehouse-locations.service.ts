@@ -19,15 +19,22 @@ import { WarehouseLocationQueryDto } from '../dto/warehouse-location-query.dto';
 
 import { WarehouseLocationsRepository } from '../repositories/warehouse-locations.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class WarehouseLocationsService {
   constructor(
     private readonly warehouseLocationsRepository: WarehouseLocationsRepository,
 
     private readonly warehousesRepository: WarehousesRepository,
+
+    private readonly auditService: AuditService,
   ) {}
 
-  async createWarehouseLocation(dto: CreateWarehouseLocationDto) {
+  async createWarehouseLocation(
+    dto: CreateWarehouseLocationDto,
+    userId: string,
+  ) {
     const warehouse = await this.warehousesRepository.findById(dto.warehouseId);
 
     if (!warehouse) {
@@ -70,6 +77,15 @@ export class WarehouseLocationsService {
           id: dto.warehouseId,
         },
       },
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_WAREHOUSE_LOCATION',
+      entityType: 'WarehouseLocation',
+      entityId: warehouseLocation.id,
+      description: `Warehouse location ${warehouseLocation.locationCode} created`,
+      newValues: warehouseLocation,
+      performedById: userId,
     });
 
     return {
@@ -175,7 +191,11 @@ export class WarehouseLocationsService {
     };
   }
 
-  async updateWarehouseLocation(id: string, dto: UpdateWarehouseLocationDto) {
+  async updateWarehouseLocation(
+    id: string,
+    dto: UpdateWarehouseLocationDto,
+    userId: string,
+  ) {
     const location = await this.warehouseLocationsRepository.findById(id);
 
     if (!location) {
@@ -229,6 +249,16 @@ export class WarehouseLocationsService {
             },
           }
         : undefined,
+    });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_WAREHOUSE_LOCATION',
+      entityType: 'WarehouseLocation',
+      entityId: updatedLocation.id,
+      description: `Warehouse location ${updatedLocation.locationCode} updated`,
+      oldValues: location,
+      newValues: updatedLocation,
+      performedById: userId,
     });
 
     return {

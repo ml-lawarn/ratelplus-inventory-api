@@ -30,6 +30,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Departments')
 @ApiBearerAuth()
 @Controller('departments')
@@ -43,8 +46,11 @@ export class DepartmentsController {
   @ApiResponse({ status: 201, description: 'Department created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createDepartment(@Body() dto: CreateDepartmentDto) {
-    return this.departmentsService.createDepartment(dto);
+  async createDepartment(
+    @Body() dto: CreateDepartmentDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.departmentsService.createDepartment(dto, user.sub);
   }
 
   @Get()
@@ -82,7 +88,8 @@ export class DepartmentsController {
   async updateDepartment(
     @Param('id') id: string,
     @Body() dto: UpdateDepartmentDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.departmentsService.updateDepartment(id, dto);
+    return this.departmentsService.updateDepartment(id, dto, user.sub);
   }
 }
