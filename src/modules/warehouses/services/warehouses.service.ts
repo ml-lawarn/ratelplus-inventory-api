@@ -13,6 +13,7 @@ import { UpdateWarehouseDto } from '../dto/update-warehouse.dto';
 import { WarehouseQueryDto } from '../dto/warehouse-query.dto';
 import { WarehousesRepository } from '../repositories/warehouses.repository';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
 
 @Injectable()
 export class WarehousesService {
@@ -20,9 +21,10 @@ export class WarehousesService {
     private readonly warehousesRepository: WarehousesRepository,
     private readonly usersRepository: UsersRepository,
     private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
   ) {}
 
-  async createWarehouse(dto: CreateWarehouseDto) {
+  async createWarehouse(dto: CreateWarehouseDto, userId: string) {
     const existingWarehouse = await this.warehousesRepository.findByCode(
       dto.code,
     );
@@ -56,6 +58,15 @@ export class WarehousesService {
             },
           }
         : undefined,
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_WAREHOUSE',
+      entityType: 'Warehouse',
+      entityId: warehouse.id,
+      description: `Warehouse ${warehouse.name} created`,
+      newValues: warehouse,
+      performedById: userId,
     });
 
     return {
@@ -158,7 +169,7 @@ export class WarehousesService {
     };
   }
 
-  async updateWarehouse(id: string, dto: UpdateWarehouseDto) {
+  async updateWarehouse(id: string, dto: UpdateWarehouseDto, userId: string) {
     const warehouse = await this.warehousesRepository.findById(id);
 
     if (!warehouse) {
@@ -202,13 +213,23 @@ export class WarehousesService {
         : undefined,
     });
 
+    await this.auditService.logActivity({
+      action: 'UPDATE_WAREHOUSE',
+      entityType: 'Warehouse',
+      entityId: updatedWarehouse.id,
+      description: `Warehouse ${updatedWarehouse.name} updated`,
+      oldValues: warehouse,
+      newValues: updatedWarehouse,
+      performedById: userId,
+    });
+
     return {
       message: 'Warehouse updated successfully',
       data: updatedWarehouse,
     };
   }
 
-  async setActiveState(id: string, isActive: boolean) {
+  async setActiveState(id: string, isActive: boolean, userId: string) {
     const warehouse = await this.warehousesRepository.findById(id);
     if (!warehouse) {
       throw new NotFoundException('Warehouse not found');
@@ -228,6 +249,17 @@ export class WarehousesService {
     }
 
     const updated = await this.warehousesRepository.update(id, { isActive });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_WAREHOUSE_STATUS',
+      entityType: 'Warehouse',
+      entityId: updated.id,
+      description: `Warehouse ${updated.name} ${isActive ? 'activated' : 'deactivated'}`,
+      oldValues: { isActive: warehouse.isActive },
+      newValues: { isActive: updated.isActive },
+      performedById: userId,
+    });
+
     return {
       message: `Warehouse ${isActive ? 'activated' : 'deactivated'} successfully`,
       data: updated,

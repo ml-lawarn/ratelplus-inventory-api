@@ -8,7 +8,11 @@ import { DepartmentsService } from './services/departments.service';
 
 import { DepartmentsRepository } from './repositories/departments.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
+  imports: [AuditModule],
+
   controllers: [DepartmentsController],
 
   providers: [DepartmentsService, DepartmentsRepository],

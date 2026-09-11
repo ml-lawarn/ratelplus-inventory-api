@@ -31,7 +31,7 @@ import { AuthService } from './auth.service';
 
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ||
-            '7d') as StringValue, // Ensure this is a string for ms parsing
+            '1d') as StringValue, // Ensure this is a string for ms parsing
         },
       }),
     }),

@@ -3,8 +3,13 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
 import * as fs from 'fs'; // Add fs module to verify files exist
-import { Attachment } from 'nodemailer/lib/mailer'; // Import the precise type definition
 import { SendEmailOptions } from './interfaces/send-email.interface';
+
+interface EmailAttachment {
+  filename: string;
+  path: string;
+  cid: string;
+}
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -81,7 +86,7 @@ export class EmailService implements OnModuleInit {
 
   private getValidAttachments() {
     // Explicitly type the array to prevent the 'never' error
-    const attachments: Attachment[] = [];
+    const attachments: EmailAttachment[] = [];
 
     // Safely check if files exist inside Docker image volume before attaching
     // if (fs.existsSync(this.logoPath)) {

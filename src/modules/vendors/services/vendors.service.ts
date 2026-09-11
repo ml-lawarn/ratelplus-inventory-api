@@ -16,11 +16,16 @@ import { VendorQueryDto } from '../dto/vendor-query.dto';
 
 import { VendorsRepository } from '../repositories/vendors.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class VendorsService {
-  constructor(private readonly vendorsRepository: VendorsRepository) {}
+  constructor(
+    private readonly vendorsRepository: VendorsRepository,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createVendor(dto: CreateVendorDto) {
+  async createVendor(dto: CreateVendorDto, userId: string) {
     const existingVendor = await this.vendorsRepository.findByName(
       dto.companyName,
     );
@@ -40,6 +45,15 @@ export class VendorsService {
       country: dto.country,
       website: dto.website,
       isActive: dto.isActive,
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_VENDOR',
+      entityType: 'Vendor',
+      entityId: vendor.id,
+      description: `Vendor ${vendor.companyName} created`,
+      newValues: vendor,
+      performedById: userId,
     });
 
     return {
@@ -133,7 +147,7 @@ export class VendorsService {
     };
   }
 
-  async updateVendor(id: string, dto: UpdateVendorDto) {
+  async updateVendor(id: string, dto: UpdateVendorDto, userId: string) {
     const vendor = await this.vendorsRepository.findById(id);
 
     if (!vendor) {
@@ -161,6 +175,16 @@ export class VendorsService {
       country: dto.country,
       website: dto.website,
       isActive: dto.isActive,
+    });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_VENDOR',
+      entityType: 'Vendor',
+      entityId: updatedVendor.id,
+      description: `Vendor ${updatedVendor.companyName} updated`,
+      oldValues: vendor,
+      newValues: updatedVendor,
+      performedById: userId,
     });
 
     return {

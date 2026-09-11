@@ -81,12 +81,39 @@ export class InventoryRepository {
     return this.prisma.equipmentItem.update({
       where: { id },
       data,
+      // Mirrors findById's include so audit oldValues/newValues snapshots
+      // are shape-symmetric and don't produce spurious diffs.
       include: {
-        category: true,
-        brand: true,
-        vendor: true,
-        warehouse: true,
-        warehouseLocation: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            parentCategoryId: true,
+          },
+        },
+        brand: {
+          select: { id: true, name: true, description: true },
+        },
+        vendor: {
+          select: { id: true, companyName: true },
+        },
+        warehouse: {
+          select: { id: true, name: true, code: true, managerId: true },
+        },
+        warehouseLocation: {
+          select: { id: true, locationCode: true },
+        },
+        inventoryBalances: {
+          include: {
+            warehouse: {
+              select: { id: true, name: true, code: true },
+            },
+            warehouseLocation: {
+              select: { id: true, locationCode: true },
+            },
+          },
+        },
       },
     });
   }

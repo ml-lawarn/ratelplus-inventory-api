@@ -10,8 +10,10 @@ import { WarehouseLocationsService } from './services/warehouse-locations.servic
 
 import { WarehouseLocationsRepository } from './repositories/warehouse-locations.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
-  imports: [WarehousesModule],
+  imports: [WarehousesModule, AuditModule],
 
   controllers: [WarehouseLocationsController],
 

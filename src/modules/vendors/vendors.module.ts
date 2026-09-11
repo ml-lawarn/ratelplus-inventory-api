@@ -8,7 +8,11 @@ import { VendorsService } from './services/vendors.service';
 
 import { VendorsRepository } from './repositories/vendors.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
+  imports: [AuditModule],
+
   controllers: [VendorsController],
 
   providers: [VendorsService, VendorsRepository],

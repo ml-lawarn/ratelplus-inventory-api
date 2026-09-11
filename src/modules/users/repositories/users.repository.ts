@@ -47,6 +47,13 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id },
       data,
+      // Mirrors findById's include so audit oldValues/newValues snapshots
+      // are shape-symmetric and don't produce spurious diffs.
+      include: {
+        department: {
+          select: { name: true },
+        },
+      },
     });
   }
 }

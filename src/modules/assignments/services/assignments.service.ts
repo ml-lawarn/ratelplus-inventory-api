@@ -422,6 +422,8 @@ export class AssignmentsService {
 
       remarks: dto.remarks || updatedAssignment.remarks || '',
 
+      oldValues: assignment,
+
       newValues: updatedAssignment,
 
       performedById: userId,

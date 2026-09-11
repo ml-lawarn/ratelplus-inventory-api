@@ -30,6 +30,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Vendors')
 @ApiBearerAuth()
 @Controller('vendors')
@@ -43,8 +46,11 @@ export class VendorsController {
   @ApiResponse({ status: 201, description: 'Vendor created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createVendor(@Body() dto: CreateVendorDto) {
-    return this.vendorsService.createVendor(dto);
+  async createVendor(
+    @Body() dto: CreateVendorDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.vendorsService.createVendor(dto, user.sub);
   }
 
   @Get()
@@ -73,7 +79,11 @@ export class VendorsController {
   @ApiResponse({ status: 200, description: 'Vendor updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async updateVendor(@Param('id') id: string, @Body() dto: UpdateVendorDto) {
-    return this.vendorsService.updateVendor(id, dto);
+  async updateVendor(
+    @Param('id') id: string,
+    @Body() dto: UpdateVendorDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.vendorsService.updateVendor(id, dto, user.sub);
   }
 }

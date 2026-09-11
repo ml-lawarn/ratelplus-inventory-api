@@ -8,7 +8,11 @@ import { CategoriesService } from './services/categories.service';
 
 import { CategoriesRepository } from './repositories/categories.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
+  imports: [AuditModule],
+
   controllers: [CategoriesController],
 
   providers: [CategoriesService, CategoriesRepository],

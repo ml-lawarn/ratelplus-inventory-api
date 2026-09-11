@@ -16,11 +16,16 @@ import { DepartmentQueryDto } from '../dto/department-query.dto';
 
 import { DepartmentsRepository } from '../repositories/departments.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class DepartmentsService {
-  constructor(private readonly departmentsRepository: DepartmentsRepository) {}
+  constructor(
+    private readonly departmentsRepository: DepartmentsRepository,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createDepartment(dto: CreateDepartmentDto) {
+  async createDepartment(dto: CreateDepartmentDto, userId: string) {
     const existingDepartment = await this.departmentsRepository.findByName(
       dto.name,
     );
@@ -32,6 +37,15 @@ export class DepartmentsService {
     const department = await this.departmentsRepository.create({
       name: dto.name,
       description: dto.description,
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_DEPARTMENT',
+      entityType: 'Department',
+      entityId: department.id,
+      description: `Department ${department.name} created`,
+      newValues: department,
+      performedById: userId,
     });
 
     return {
@@ -107,7 +121,7 @@ export class DepartmentsService {
     };
   }
 
-  async updateDepartment(id: string, dto: UpdateDepartmentDto) {
+  async updateDepartment(id: string, dto: UpdateDepartmentDto, userId: string) {
     const department = await this.departmentsRepository.findById(id);
 
     if (!department) {
@@ -127,6 +141,16 @@ export class DepartmentsService {
     const updatedDepartment = await this.departmentsRepository.update(id, {
       name: dto.name,
       description: dto.description,
+    });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_DEPARTMENT',
+      entityType: 'Department',
+      entityId: updatedDepartment.id,
+      description: `Department ${updatedDepartment.name} updated`,
+      oldValues: department,
+      newValues: updatedDepartment,
+      performedById: userId,
     });
 
     return {
