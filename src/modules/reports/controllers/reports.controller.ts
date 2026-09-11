@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { Role } from '../../../shared/enums/role.enum';
+import { PaginationQueryDto } from '../../../shared/dto/pagination-query.dto';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
@@ -98,8 +99,8 @@ export class ReportsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async assetUtilisation() {
-    return this.reportsService.assetUtilisationReport();
+  async assetUtilisation(@Query() query: PaginationQueryDto) {
+    return this.reportsService.assetUtilisationReport(query);
   }
 
   @Get('inventory-summary/pdf')

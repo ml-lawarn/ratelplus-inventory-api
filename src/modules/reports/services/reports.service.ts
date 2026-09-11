@@ -4,6 +4,8 @@ import { Injectable } from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../core/database/prisma.service';
+import { PaginationQueryDto } from '../../../shared/dto/pagination-query.dto';
+import { buildPagination } from '../../../shared/utils/pagination.util';
 
 import { PdfService } from '../../../infrastructure/pdf/pdf.service';
 import { buildInventorySummaryPdf } from '../../../infrastructure/pdf/templates/inventory-summary.template';
@@ -144,22 +146,58 @@ export class ReportsService {
   }
 
   async assetUtilisationPdf() {
-    const report = await this.assetUtilisationReport();
+    const items = await this.computeAssetUtilisation();
 
     return this.pdfService.generatePdf((doc) => {
-      buildAssetUtilisationPdf(doc, report.data);
+      buildAssetUtilisationPdf(doc, items);
     });
   }
 
-  async assetUtilisationReport() {
+  async assetUtilisationReport(query: PaginationQueryDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+
+    const items = await this.computeAssetUtilisation();
+    const total = items.length;
+    const { skip, take } = buildPagination(page, limit);
+
+    return {
+      message: 'Asset utilisation report generated successfully',
+      data: {
+        items: items.slice(skip, skip + take),
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    };
+  }
+
+  // Shared by both the paginated on-screen report and the full PDF export.
+  // Only selects the columns actually needed instead of the full
+  // equipmentItem/assignment/maintenanceRecord rows - with a large fleet of
+  // assets this previously pulled every column of every assignment and
+  // maintenance record for every asset into memory on every request.
+  private async computeAssetUtilisation() {
     const items = await this.prisma.equipmentItem.findMany({
-      include: {
+      select: {
+        id: true,
+        assetTag: true,
+        equipmentName: true,
+        status: true,
+        createdAt: true,
         assignments: {
-          orderBy: {
-            checkoutDate: 'asc',
+          select: {
+            checkoutDate: true,
+            actualReturnDate: true,
+            assignmentStatus: true,
           },
         },
-        maintenanceRecords: true,
+        _count: {
+          select: { maintenanceRecords: true },
+        },
       },
     });
 
@@ -184,14 +222,15 @@ export class ReportsService {
         equipmentName: item.equipmentName,
         status: item.status,
         assignmentCount: item.assignments.length,
-        maintenanceCount: item.maintenanceRecords.length,
+        maintenanceCount: item._count.maintenanceRecords,
         utilisationPercent: Number(((assignedMs / ageMs) * 100).toFixed(2)),
       };
     });
 
-    return {
-      message: 'Asset utilisation report generated successfully',
-      data: utilisation,
-    };
+    // Highest-utilisation assets first by default - the most actionable
+    // view for a report of this shape (heaviest use / least idle first).
+    utilisation.sort((a, b) => b.utilisationPercent - a.utilisationPercent);
+
+    return utilisation;
   }
 }
