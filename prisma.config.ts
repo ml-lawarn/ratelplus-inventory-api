@@ -7,7 +7,11 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
-    seed: 'pnpm tsx ./prisma/seed.ts',
+    // Invoke the tsx binary directly rather than through `pnpm tsx` - the
+    // production runtime image doesn't have pnpm installed (only the
+    // packages themselves), so a pnpm-wrapped command fails there even
+    // though it works fine in local dev where pnpm is on PATH.
+    seed: 'node_modules/.bin/tsx ./prisma/seed.ts',
   },
   datasource: {
     url: process.env['DATABASE_URL'],

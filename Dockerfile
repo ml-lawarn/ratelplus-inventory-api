@@ -51,6 +51,12 @@ COPY --from=build --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=build --chown=nestjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build --chown=nestjs:nodejs /app/package.json ./package.json
 
+# prisma/seed.ts imports from src/shared/enums (TypeScript source, run
+# through tsx at seed time, not the compiled dist/ output), so src/ has to
+# be present here too even though the app itself runs from dist/.
+COPY --from=build --chown=nestjs:nodejs /app/src ./src
+COPY --from=build --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
+
 USER nestjs
 
 # The app listens on $PORT (defaults to 3000, see src/main.ts)
