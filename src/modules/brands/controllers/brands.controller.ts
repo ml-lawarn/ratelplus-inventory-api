@@ -30,6 +30,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Brands')
 @ApiBearerAuth()
 @Controller('brands')
@@ -43,8 +46,11 @@ export class BrandsController {
   @ApiResponse({ status: 201, description: 'Brand created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createBrand(@Body() dto: CreateBrandDto) {
-    return this.brandsService.createBrand(dto);
+  async createBrand(
+    @Body() dto: CreateBrandDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.brandsService.createBrand(dto, user.sub);
   }
 
   @Get()
@@ -87,7 +93,11 @@ export class BrandsController {
   @ApiResponse({ status: 200, description: 'Brand updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async updateBrand(@Param('id') id: string, @Body() dto: UpdateBrandDto) {
-    return this.brandsService.updateBrand(id, dto);
+  async updateBrand(
+    @Param('id') id: string,
+    @Body() dto: UpdateBrandDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.brandsService.updateBrand(id, dto, user.sub);
   }
 }

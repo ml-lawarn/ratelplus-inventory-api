@@ -426,6 +426,8 @@ export class MaintenanceService {
 
       description: `Maintenance status of ${equipment.equipmentName} updated to ${dto.maintenanceStatus} by ${[updatedMaintenance.createdBy.firstName, updatedMaintenance.createdBy.lastName].filter(Boolean).join(' ') || updatedMaintenance.createdBy.email}`,
 
+      oldValues: maintenance,
+
       newValues: updatedMaintenance,
 
       performedById: userId,

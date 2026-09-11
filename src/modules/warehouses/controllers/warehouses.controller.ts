@@ -30,6 +30,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Warehouses')
 @ApiBearerAuth()
 @Controller('warehouses')
@@ -43,8 +46,11 @@ export class WarehousesController {
   @ApiResponse({ status: 201, description: 'Warehouse created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createWarehouse(@Body() dto: CreateWarehouseDto) {
-    return this.warehousesService.createWarehouse(dto);
+  async createWarehouse(
+    @Body() dto: CreateWarehouseDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.warehousesService.createWarehouse(dto, user.sub);
   }
 
   @Get()
@@ -93,8 +99,9 @@ export class WarehousesController {
   async updateWarehouse(
     @Param('id') id: string,
     @Body() dto: UpdateWarehouseDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.warehousesService.updateWarehouse(id, dto);
+    return this.warehousesService.updateWarehouse(id, dto, user.sub);
   }
 
   @Patch(':id/activate')
@@ -103,8 +110,11 @@ export class WarehousesController {
   @ApiResponse({ status: 200, description: 'Warehouse activated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async activateWarehouse(@Param('id') id: string) {
-    return this.warehousesService.setActiveState(id, true);
+  async activateWarehouse(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.warehousesService.setActiveState(id, true, user.sub);
   }
 
   @Patch(':id/deactivate')
@@ -116,7 +126,10 @@ export class WarehousesController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async deactivateWarehouse(@Param('id') id: string) {
-    return this.warehousesService.setActiveState(id, false);
+  async deactivateWarehouse(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.warehousesService.setActiveState(id, false, user.sub);
   }
 }

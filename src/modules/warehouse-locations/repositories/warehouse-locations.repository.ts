@@ -49,6 +49,11 @@ export class WarehouseLocationsRepository {
     return this.prisma.warehouseLocation.update({
       where: { id },
       data,
+      // Mirrors findById's include so audit oldValues/newValues snapshots
+      // are shape-symmetric and don't produce spurious diffs.
+      include: {
+        warehouse: true,
+      },
     });
   }
 }

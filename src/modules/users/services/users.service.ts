@@ -75,6 +75,7 @@ export class UsersService {
       entityType: 'User',
       entityId: user.id,
       description: `${user.firstName + ' ' + user.lastName}${user.lastName.endsWith('s') ? "'" : "'s"} account has created by ${actorName}.`,
+      newValues: this.excludePassword(user),
       performedById: userId,
     });
 
@@ -228,6 +229,8 @@ export class UsersService {
       entityType: 'User',
       entityId: updatedUser.id,
       description: `${updatedUser.firstName + ' ' + updatedUser.lastName}${updatedUser.lastName.endsWith('s') ? "'" : "'s"} account has updated by ${actorName}.`,
+      oldValues: this.excludePassword(user),
+      newValues: this.excludePassword(updatedUser),
       performedById: userId,
     });
 
@@ -273,6 +276,8 @@ export class UsersService {
       entityType: 'User',
       entityId: updatedUser.id,
       description: `${updatedUser.firstName + ' ' + updatedUser.lastName}${updatedUser.lastName.endsWith('s') ? "'" : "'s"} account has been ${updatedUser.isActive ? 'Activated' : 'Deactivated'} by ${actorName}.`,
+      oldValues: { isActive: user.isActive },
+      newValues: { isActive: updatedUser.isActive },
       performedById: userId,
     });
 

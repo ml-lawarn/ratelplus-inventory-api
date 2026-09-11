@@ -16,11 +16,16 @@ import { BrandQueryDto } from '../dto/brand-query.dto';
 
 import { BrandsRepository } from '../repositories/brands.repository';
 
+import { AuditService } from '../../audit/services/audit.service';
+
 @Injectable()
 export class BrandsService {
-  constructor(private readonly brandsRepository: BrandsRepository) {}
+  constructor(
+    private readonly brandsRepository: BrandsRepository,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createBrand(dto: CreateBrandDto) {
+  async createBrand(dto: CreateBrandDto, userId: string) {
     const existingBrand = await this.brandsRepository.findByName(dto.name);
 
     if (existingBrand) {
@@ -30,6 +35,15 @@ export class BrandsService {
     const brand = await this.brandsRepository.create({
       name: dto.name,
       description: dto.description,
+    });
+
+    await this.auditService.logActivity({
+      action: 'CREATE_BRAND',
+      entityType: 'Brand',
+      entityId: brand.id,
+      description: `Brand ${brand.name} created`,
+      newValues: brand,
+      performedById: userId,
     });
 
     return {
@@ -104,7 +118,7 @@ export class BrandsService {
     };
   }
 
-  async updateBrand(id: string, dto: UpdateBrandDto) {
+  async updateBrand(id: string, dto: UpdateBrandDto, userId: string) {
     const brand = await this.brandsRepository.findById(id);
 
     if (!brand) {
@@ -122,6 +136,16 @@ export class BrandsService {
     const updatedBrand = await this.brandsRepository.update(id, {
       name: dto.name,
       description: dto.description,
+    });
+
+    await this.auditService.logActivity({
+      action: 'UPDATE_BRAND',
+      entityType: 'Brand',
+      entityId: updatedBrand.id,
+      description: `Brand ${updatedBrand.name} updated`,
+      oldValues: brand,
+      newValues: updatedBrand,
+      performedById: userId,
     });
 
     return {

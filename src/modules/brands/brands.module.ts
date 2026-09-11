@@ -8,7 +8,11 @@ import { BrandsService } from './services/brands.service';
 
 import { BrandsRepository } from './repositories/brands.repository';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
+  imports: [AuditModule],
+
   controllers: [BrandsController],
 
   providers: [BrandsService, BrandsRepository],

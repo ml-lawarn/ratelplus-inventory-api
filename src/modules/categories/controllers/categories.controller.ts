@@ -30,6 +30,9 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 
 import { Role } from '../../../shared/enums/role.enum';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { type JwtPayload } from '../../../shared/interfaces/jwt-payload.interface';
+
 @ApiTags('Categories')
 @ApiBearerAuth()
 @Controller('categories')
@@ -43,8 +46,11 @@ export class CategoriesController {
   @ApiResponse({ status: 201, description: 'Category created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
-  async createCategory(@Body() dto: CreateCategoryDto) {
-    return this.categoriesService.createCategory(dto);
+  async createCategory(
+    @Body() dto: CreateCategoryDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.categoriesService.createCategory(dto, user.sub);
   }
 
   @Get()
@@ -93,7 +99,8 @@ export class CategoriesController {
   async updateCategory(
     @Param('id') id: string,
     @Body() dto: UpdateCategoryDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.categoriesService.updateCategory(id, dto);
+    return this.categoriesService.updateCategory(id, dto, user.sub);
   }
 }

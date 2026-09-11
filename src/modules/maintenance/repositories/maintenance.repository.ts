@@ -20,8 +20,20 @@ export class MaintenanceRepository {
     return this.prisma.maintenanceRecord.findUnique({
       where: { id },
 
+      // Mirrors the include used when updating maintenance status so audit
+      // oldValues/newValues snapshots are shape-symmetric and don't produce
+      // spurious diffs.
       include: {
         equipmentItem: true,
+        vendor: true,
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
     });
   }
