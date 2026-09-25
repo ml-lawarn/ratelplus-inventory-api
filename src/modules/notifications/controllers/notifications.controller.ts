@@ -1,3 +1,5 @@
+//src/modules/notifications/controllers/notifications.controller.ts
+
 import {
   Controller,
   Get,

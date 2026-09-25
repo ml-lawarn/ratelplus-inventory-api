@@ -1,3 +1,5 @@
+//src/modules/notifications/dto/notification-query.dto.ts
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional } from 'class-validator';
